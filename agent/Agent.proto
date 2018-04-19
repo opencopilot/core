@@ -1,0 +1,38 @@
+syntax = "proto3";
+package opencopilot;
+
+service Agent {
+    rpc GetStatus(AgentStatusRequest) returns (AgentStatus) {}
+    rpc GetServiceLogs(GetServiceLogsRequest) returns (stream ServiceLogLine) {}
+
+    rpc SetServiceGRPC(SetServiceGRPCRequest) returns (AgentStatus) {}
+}
+
+message AgentStatusRequest {}
+
+message StopServiceRequest {
+    string container_id = 1;
+}
+
+message SetServiceGRPCRequest {
+    string container_id = 1;
+    int32 port = 2;
+}
+
+message GetServiceLogsRequest {
+    string container_id = 1;
+}
+
+message ServiceLogLine {
+    string line = 1;
+}
+
+message AgentStatus {
+    string agent_id = 1;
+    repeated AgentService services = 2;
+
+    message AgentService {
+        string id = 1;
+        string image = 2;
+    }
+}
