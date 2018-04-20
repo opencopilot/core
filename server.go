@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	consul "github.com/hashicorp/consul/api"
-	consulkvjson "github.com/opencopilot/consul-kv-json"
 	pb "github.com/opencopilot/core/core"
 	"github.com/opencopilot/core/instance"
 	"google.golang.org/grpc/codes"
@@ -89,49 +88,17 @@ func (s *server) AddService(ctx context.Context, in *pb.AddServiceRequest) (*pb.
 		return nil, errors.New("Invalid auth provider")
 	}
 
-	kv := s.consulClient.KV()
-
-	config := in.Config
-
-	kvs, err := consulkvjson.ToKVs([]byte(config))
+	i, err := instance.AddService(s.consulClient, in.InstanceId, in.Service.Type, in.Service.Config)
 	if err != nil {
 		return nil, err
 	}
 
-	ops := consul.KVTxnOps{
-		&consul.KVTxnOp{
-			Verb: consul.KVDeleteTree,
-			Key:  "instances/" + in.InstanceId + "/services/" + in.Service + "/",
-		},
-	}
-	for _, kv := range kvs {
-		ops = append(ops, &consul.KVTxnOp{
-			Verb:  consul.KVSet,
-			Key:   "instances/" + in.InstanceId + "/services/" + in.Service + "/" + kv.Key,
-			Value: []byte(kv.Value),
-		})
-	}
-	ok, _, _, err := kv.Txn(ops, nil)
+	instanceMessage, err := i.ToMessage()
 	if err != nil {
 		return nil, err
 	}
 
-	if !ok {
-		return nil, errors.New("Could not set service config")
-	}
-
-	i := instance.Instance{ID: in.InstanceId}
-	instance, err := i.GetInstance(s.consulClient)
-	if err != nil {
-		return nil, err
-	}
-
-	imessage, err := instance.ToMessage()
-	if err != nil {
-		return nil, err
-	}
-
-	return imessage, nil
+	return instanceMessage, nil
 }
 
 func (s *server) RemoveService(ctx context.Context, in *pb.RemoveServiceRequest) (*pb.Instance, error) {
@@ -143,5 +110,14 @@ func (s *server) RemoveService(ctx context.Context, in *pb.RemoveServiceRequest)
 		return nil, errors.New("Invalid auth provider")
 	}
 
-	return nil, nil
+	i, err := instance.RemoveService(s.consulClient, in.InstanceId, in.ServiceType)
+	if err != nil {
+		return nil, err
+	}
+
+	instanceMessage, err := i.ToMessage()
+	if err != nil {
+		return nil, err
+	}
+	return instanceMessage, nil
 }

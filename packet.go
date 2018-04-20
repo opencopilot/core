@@ -2,14 +2,12 @@ package main
 
 import (
 	"errors"
-	"log"
 	"os"
 
 	"github.com/google/uuid"
 	consul "github.com/hashicorp/consul/api"
-	consulkvjson "github.com/opencopilot/consul-kv-json"
 	pb "github.com/opencopilot/core/core"
-	instance "github.com/opencopilot/core/instance"
+	"github.com/opencopilot/core/instance"
 	packet "github.com/packethost/packngo"
 )
 
@@ -20,40 +18,37 @@ var (
 
 // GetPacketInstance gets an instance by ID
 func GetPacketInstance(consulClient consul.Client, in *pb.GetInstanceRequest) (*pb.Instance, error) {
-	kv := consulClient.KV()
+	// kv := consulClient.KV()
 
 	i, err := instance.NewInstance(consulClient, in.InstanceId)
 	if err != nil {
 		return nil, err
 	}
 
-	services := make([]*pb.Service, 0)
-	for _, service := range i.Services {
-		config, _, err := kv.List("instances/"+i.ID+"/services/"+service+"/", nil)
-		if err != nil {
-			return nil, err
-		}
+	// services := make([]*pb.Service, 0)
+	// for _, service := range i.Services {
+	// 	config, _, err := kv.List("instances/"+i.ID+"/services/"+service.Type+"/", nil)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
 
-		configKVs := make([]*consulkvjson.KV, 0)
+	// 	configMap, err := consulkvjson.ConsulKVsToJSON(config)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
 
-		log.Printf("%v", configKVs)
+	// 	configJSON, err := json.Marshal(configMap)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
 
-		for _, kv := range config {
-			configKVs = append(configKVs, &consulkvjson.KV{Key: kv.Key, Value: string(kv.Value)})
-		}
+	// 	log.Printf("%s", configJSON)
 
-		configJSON, err := consulkvjson.ToJSON(configKVs)
-		if err != nil {
-			return nil, err
-		}
-
-		log.Printf("%s", configJSON)
-
-		services = append(services, &pb.Service{
-			Type:   service,
-			Config: string(configJSON),
-		})
-	}
+	// 	services = append(services, &pb.Service{
+	// 		Type:   service.Type,
+	// 		Config: string(configJSON),
+	// 	})
+	// }
 
 	instanceMessage, err := i.ToMessage()
 	if err != nil {

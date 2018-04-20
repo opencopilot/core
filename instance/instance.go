@@ -1,10 +1,15 @@
 package instance
 
 import (
+	"encoding/json"
 	"errors"
+	"log"
 	"strings"
 
+	"github.com/buger/jsonparser"
+
 	consul "github.com/hashicorp/consul/api"
+	"github.com/opencopilot/consul-kv-json"
 	pb "github.com/opencopilot/core/core"
 )
 
@@ -12,9 +17,39 @@ import (
 type Instance struct {
 	ID       string
 	Provider *Provider
-	Services []string
+	Services Services
 	Owner    string
 	Device   string
+}
+
+// Service is a managed service
+type Service struct {
+	Type   string
+	Config string
+}
+
+// ToMessage serializes a Service for gRPC
+func (s *Service) ToMessage() (*pb.Service, error) {
+	return &pb.Service{
+		Type:   s.Type,
+		Config: s.Config,
+	}, nil
+}
+
+// Services is a list of Service
+type Services []*Service
+
+// ToMessage serializes a list of Services for gRPC
+func (services Services) ToMessage() ([]*pb.Service, error) {
+	s := make([]*pb.Service, 0)
+	for _, service := range services {
+		serialized, err := service.ToMessage()
+		if err != nil {
+			return nil, err
+		}
+		s = append(s, serialized)
+	}
+	return s, nil
 }
 
 // Provider is an instance provider (such as Packet)
@@ -22,7 +57,7 @@ type Provider struct {
 	provider pb.Provider
 }
 
-func (p Provider) String() (string, error) {
+func (p *Provider) String() (string, error) {
 	return p.provider.String(), nil
 }
 
@@ -70,68 +105,85 @@ type CreateInstanceRequest struct {
 
 // ToMessage converts an instance to something that can be sent back over gRPC
 func (i *Instance) ToMessage() (*pb.Instance, error) {
+	services, err := i.Services.ToMessage()
+	if err != nil {
+		return nil, err
+	}
 	return &pb.Instance{
 		Id:       i.ID,
 		Owner:    i.Owner,
 		Provider: i.Provider.provider,
 		Device:   i.Device,
+		Services: services,
 	}, nil
 }
 
 // GetInstance gets instance info
 func (i *Instance) GetInstance(consulClient consul.Client) (*Instance, error) {
 	kv := consulClient.KV()
-
-	ops := consul.KVTxnOps{
-		&consul.KVTxnOp{
-			Verb: consul.KVGet,
-			Key:  i.instancePrefix() + "/provider",
-		},
-		&consul.KVTxnOp{
-			Verb: consul.KVGet,
-			Key:  i.instancePrefix() + "/owner",
-		},
-		&consul.KVTxnOp{
-			Verb: consul.KVGet,
-			Key:  i.instancePrefix() + "/device",
-		},
-	}
-	ok, response, _, err := kv.Txn(ops, nil)
+	kvs, _, err := kv.List(i.instancePrefix(), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	if !ok {
-		return nil, errors.New("Could not fetch instance from Consul")
-	}
-
-	instanceInfo := make(map[string]string)
-
-	for _, res := range response.Results {
-		instanceInfo[res.Key] = string(res.Value[:])
-	}
-
-	keys, _, err := kv.Keys(i.servicesPrefix(), "/", nil)
+	m, err := consulkvjson.ConsulKVsToJSON(kvs)
 	if err != nil {
 		return nil, err
 	}
 
-	services := make([]string, 0)
-
-	for _, key := range keys[1:] {
-		service := strings.Replace(key, i.servicesPrefix(), "", 1)
-		services = append(services, strings.Replace(service, "/", "", 1))
-	}
-
-	provider, err := NewProvider(instanceInfo[i.instancePrefix()+"/provider"])
+	jsonString, err := json.Marshal(m)
 	if err != nil {
 		return nil, err
 	}
 
-	i.Provider = provider
-	i.Owner = instanceInfo[i.instancePrefix()+"/owner"]
-	i.Device = instanceInfo[i.instancePrefix()+"/device"]
-	i.Services = services
+	owner, dataType, _, err := jsonparser.Get(jsonString, "instances", i.ID, "owner")
+	if err != nil {
+		return nil, err
+	}
+	if dataType == jsonparser.NotExist {
+		owner = nil
+	}
+
+	device, dataType, _, err := jsonparser.Get(jsonString, "instances", i.ID, "device")
+	if err != nil {
+		return nil, err
+	}
+	if dataType == jsonparser.NotExist {
+		device = nil
+	}
+
+	provider, dataType, _, err := jsonparser.Get(jsonString, "instances", i.ID, "provider")
+	if err != nil {
+		return nil, err
+	}
+	if dataType == jsonparser.NotExist {
+		provider = nil
+	}
+
+	serviceList := make([]*Service, 0)
+	services, dataType, _, _ := jsonparser.Get(jsonString, "instances", i.ID, "services")
+	if dataType == jsonparser.NotExist {
+		services = nil
+	} else {
+		jsonparser.ObjectEach(services, func(service, config []byte, dataType jsonparser.ValueType, offset int) error {
+			log.Printf("%s", service)
+			serviceList = append(serviceList, &Service{
+				Type:   string(service),
+				Config: string(config),
+			})
+			return nil
+		})
+	}
+
+	p, err := NewProvider(string(provider))
+	if err != nil {
+		return nil, err
+	}
+
+	i.Provider = p
+	i.Owner = string(owner)
+	i.Device = string(device)
+	i.Services = serviceList
 
 	return i, nil
 }
@@ -141,10 +193,6 @@ func CreateInstance(consulClient consul.Client, instanceParams CreateInstanceReq
 	kv := consulClient.KV()
 
 	ops := consul.KVTxnOps{
-		&consul.KVTxnOp{
-			Verb: consul.KVSet,
-			Key:  "instances/" + instanceParams.ID + "/services/",
-		},
 		&consul.KVTxnOp{
 			Verb:  consul.KVSet,
 			Key:   "instances/" + instanceParams.ID + "/provider",
@@ -179,12 +227,72 @@ func CreateInstance(consulClient consul.Client, instanceParams CreateInstanceReq
 	return instance, nil
 }
 
-func AddService(consulClient consul.Client) (*Instance, error) {
-	return nil, nil
+// AddService adds a service in consul
+func AddService(consulClient consul.Client, instanceID, service, config string) (*Instance, error) {
+	kv := consulClient.KV()
+
+	// TODO: add a check to handle case when config is empty object
+	kvs, err := consulkvjson.ToKVs([]byte(config))
+	if err != nil {
+		return nil, err
+	}
+
+	ops := consul.KVTxnOps{
+		&consul.KVTxnOp{
+			Verb: consul.KVDeleteTree,
+			Key:  "instances/" + instanceID + "/services/" + service,
+		},
+	}
+	for _, kv := range kvs {
+		ops = append(ops, &consul.KVTxnOp{
+			Verb:  consul.KVSet,
+			Key:   "instances/" + instanceID + "/services/" + service + "/" + kv.Key,
+			Value: []byte(kv.Value),
+		})
+	}
+	ok, _, _, err := kv.Txn(ops, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if !ok {
+		return nil, errors.New("Could not set service config")
+	}
+
+	i := Instance{ID: instanceID}
+	instance, err := i.GetInstance(consulClient)
+	if err != nil {
+		return nil, err
+	}
+	return instance, nil
 }
 
-func RemoveService(consulClient consul.Client) (*Instance, error) {
-	return nil, nil
+// RemoveService removes a service from Consul
+func RemoveService(consulClient consul.Client, instanceID, service string) (*Instance, error) {
+	kv := consulClient.KV()
+
+	ops := consul.KVTxnOps{
+		&consul.KVTxnOp{
+			Verb: consul.KVDeleteTree,
+			Key:  "instances/" + instanceID + "/services/" + service,
+		},
+	}
+
+	ok, _, _, err := kv.Txn(ops, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if !ok {
+		return nil, errors.New("Could not remove service")
+	}
+
+	i := Instance{ID: instanceID}
+	instance, err := i.GetInstance(consulClient)
+	if err != nil {
+		return nil, err
+	}
+	return instance, nil
 }
 
 // ListInstances lists all instances from Consul
@@ -197,12 +305,11 @@ func ListInstances(consulClient consul.Client) ([]*Instance, error) {
 
 	instances := make([]*Instance, 0)
 
-	for _, key := range keys[1:] {
+	for _, key := range keys {
 		instance := strings.Replace(key, "instances/", "", 1)
 		instanceID := strings.Replace(instance, "/", "", 1)
 		i, _ := NewInstance(consulClient, instanceID)
 		instances = append(instances, i)
 	}
-
 	return instances, nil
 }

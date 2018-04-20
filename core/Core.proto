@@ -45,14 +45,13 @@ message GetInstanceRequest {
 message AddServiceRequest {
     Auth auth = 1;
     string instance_id = 2;
-    string service = 3;
-    string config = 4;
+    Service service = 3;
 }
 
 message RemoveServiceRequest {
     Auth auth = 1;
     string instance_id = 2;
-    string service = 3;
+    string service_type = 3;
 }
 
 message Instance {
@@ -62,11 +61,6 @@ message Instance {
     string device = 4;
     repeated Service services = 5;
 }
-
-// message Device {
-//     string id = 1;
-//     string status = 2;
-// }
 
 message Service {
     string type = 1;
