@@ -1,0 +1,11 @@
+workspace:
+  base: /go
+  path: src/github.com/opencopilot/core
+
+pipeline:
+  test:
+    group: ci
+    image: golang:1.9
+    commands:
+      - go get
+      - go test
