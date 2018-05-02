@@ -9,6 +9,7 @@ service Core {
     
     rpc AddService(AddServiceRequest) returns (Instance) {}
     rpc RemoveService(RemoveServiceRequest) returns (Instance) {}
+    // rpc ConfigureService(ConfigureServiceRequest) returns (Instance) {}
 }
 
 enum Provider {
@@ -53,6 +54,12 @@ message RemoveServiceRequest {
     string instance_id = 2;
     string service_type = 3;
 }
+
+// message ConfigureServiceRequest {
+//     Auth auth = 1;
+//     string instance_id = 2;
+//     Service service = 3;
+// }
 
 message Instance {
     string id = 1;

@@ -9,7 +9,7 @@ import (
 	"github.com/buger/jsonparser"
 
 	consul "github.com/hashicorp/consul/api"
-	"github.com/opencopilot/consul-kv-json"
+	"github.com/opencopilot/consulkvjson"
 	pb "github.com/opencopilot/core/core"
 )
 
@@ -231,7 +231,7 @@ func CreateInstance(consulClient consul.Client, instanceParams CreateInstanceReq
 func AddService(consulClient consul.Client, instanceID, service, config string) (*Instance, error) {
 	kv := consulClient.KV()
 
-	// TODO: add a check to handle case when config is empty object
+	// TODO: add a check to handle case when config is empty object. Right now, if there's no config, no service is created.
 	kvs, err := consulkvjson.ToKVs([]byte(config))
 	if err != nil {
 		return nil, err
@@ -308,7 +308,10 @@ func ListInstances(consulClient consul.Client) ([]*Instance, error) {
 	for _, key := range keys {
 		instance := strings.Replace(key, "instances/", "", 1)
 		instanceID := strings.Replace(instance, "/", "", 1)
-		i, _ := NewInstance(consulClient, instanceID)
+		i, err := NewInstance(consulClient, instanceID)
+		if err != nil {
+			log.Fatal(err)
+		}
 		instances = append(instances, i)
 	}
 	return instances, nil
