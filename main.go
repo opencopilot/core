@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net"
+	"os"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -51,7 +52,12 @@ func startGRPC() {
 		)),
 	)
 
-	consulCli, err := consul.NewClient(consul.DefaultConfig())
+	consulClientConfig := consul.DefaultConfig()
+	if os.Getenv("ENV") == "dev" {
+		consulClientConfig.Address = "host.docker.internal:8500"
+	}
+
+	consulCli, err := consul.NewClient(consulClientConfig)
 	if err != nil {
 		log.Fatalf("failed to setup consul client on gRPC server")
 	}
