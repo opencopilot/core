@@ -227,6 +227,28 @@ func CreateInstance(consulClient consul.Client, instanceParams CreateInstanceReq
 	return instance, nil
 }
 
+// DestroyInstance removes an instance from Consul
+func (i *Instance) DestroyInstance(consulClient consul.Client) error {
+	kv := consulClient.KV()
+
+	ops := consul.KVTxnOps{
+		&consul.KVTxnOp{
+			Verb: consul.KVDeleteTree,
+			Key:  "instances/" + i.ID + "/",
+		},
+	}
+	ok, _, _, err := kv.Txn(ops, nil)
+	if err != nil {
+		return err
+	}
+
+	if !ok {
+		return errors.New("Could not remove instance in Consul")
+	}
+
+	return nil
+}
+
 // SetInstanceFields sets instance/instanceID/fieldName to fieldValue
 func (i *Instance) SetInstanceFields(consulClient consul.Client, instanceFields map[string]string) (*Instance, error) {
 	// TODO add some sanity checks - only allow certain fields to be set?

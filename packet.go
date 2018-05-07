@@ -64,6 +64,7 @@ func CreatePacketInstance(consulClient consul.Client, in *pb.CreateInstanceReque
 	}
 	device, _, err := packetClient.Devices.Create(&createReq)
 	if err != nil {
+
 		return nil, err
 	}
 
@@ -80,7 +81,6 @@ func CreatePacketInstance(consulClient consul.Client, in *pb.CreateInstanceReque
 
 // DestroyPacketInstance destroys a packet instance
 func DestroyPacketInstance(consulClient consul.Client, in *pb.DestroyInstanceRequest) (*pb.DestroyInstanceResponse, error) {
-	kv := consulClient.KV()
 	packetClient := packet.NewClient("", in.Auth.Payload, nil)
 
 	instance, err := instance.NewInstance(consulClient, in.InstanceId)
@@ -96,19 +96,9 @@ func DestroyPacketInstance(consulClient consul.Client, in *pb.DestroyInstanceReq
 		return nil, errors.New("Device is still provisioning")
 	}
 
-	ops := consul.KVTxnOps{
-		&consul.KVTxnOp{
-			Verb: consul.KVDeleteTree,
-			Key:  "instances/" + in.InstanceId + "/",
-		},
-	}
-	ok, _, _, err := kv.Txn(ops, nil)
+	err = instance.DestroyInstance(consulClient)
 	if err != nil {
 		return nil, err
-	}
-
-	if !ok {
-		return nil, errors.New("Could not remove instance in Consul")
 	}
 
 	packetClient.Devices.Delete(instance.Device)
