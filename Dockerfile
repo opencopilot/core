@@ -28,6 +28,6 @@ RUN go get -v -x
 
 RUN go build -o cmd/core
 
-EXPOSE 50050
+EXPOSE 50060
 
 ENTRYPOINT [ "cmd/core" ]
