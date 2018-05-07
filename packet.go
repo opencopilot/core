@@ -64,7 +64,7 @@ func CreatePacketInstance(consulClient consul.Client, in *pb.CreateInstanceReque
 	}
 	device, _, err := packetClient.Devices.Create(&createReq)
 	if err != nil {
-
+		instance.DestroyInstance(consulClient)
 		return nil, err
 	}
 

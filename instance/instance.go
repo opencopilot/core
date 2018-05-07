@@ -286,7 +286,11 @@ func (i *Instance) SetInstanceFields(consulClient consul.Client, instanceFields 
 func AddService(consulClient consul.Client, instanceID, service, config string) (*Instance, error) {
 	kv := consulClient.KV()
 
-	// TODO: throw error if service already exists
+	// throw error if service already exists
+	s, _ := GetService(consulClient, instanceID, service)
+	if s != nil {
+		return nil, errors.New("service already exists")
+	}
 
 	// TODO: add a check to handle case when config is empty object. Right now, if there's no config, no service is created.
 	kvs, err := consulkvjson.ToKVs([]byte(config))
@@ -322,6 +326,81 @@ func AddService(consulClient consul.Client, instanceID, service, config string) 
 		return nil, err
 	}
 	return instance, nil
+}
+
+// GetService returns the service requested
+func GetService(consulClient consul.Client, instanceID, serviceType string) (*Service, error) {
+	kv := consulClient.KV()
+	serviceKVPairs, _, err := kv.List("instances/"+instanceID+"/services/"+serviceType, nil)
+	if err != nil {
+		return nil, err
+	}
+	if len(serviceKVPairs) == 0 {
+		return nil, errors.New("service not found")
+	}
+	serviceJSON, err := consulkvjson.ConsulKVsToJSON(serviceKVPairs)
+	if err != nil {
+		return nil, err
+	}
+	serviceJSONString, err := json.Marshal(serviceJSON)
+	config, dataType, _, err := jsonparser.Get(serviceJSONString, "instances", instanceID, "services", serviceType)
+	if err != nil {
+		return nil, err
+	}
+	if dataType == jsonparser.NotExist {
+		return nil, errors.New("could not retrieve service config")
+	}
+
+	return &Service{
+		Type:   serviceType,
+		Config: string(config),
+	}, nil
+}
+
+// ConfigureService sets the configuration for a service in Consul
+func ConfigureService(consulClient consul.Client, instanceID, serviceType, config string) (*Service, error) {
+	kv := consulClient.KV()
+	s, err := GetService(consulClient, instanceID, serviceType)
+	if err != nil {
+		return nil, err
+	}
+	if s == nil {
+		return nil, errors.New("problem with service")
+	}
+	// TODO: add a check to handle case when config is empty object. Right now, if there's no config, no service is created.
+	kvs, err := consulkvjson.ToKVs([]byte(config))
+	if err != nil {
+		return nil, err
+	}
+
+	ops := consul.KVTxnOps{
+		&consul.KVTxnOp{
+			Verb: consul.KVDeleteTree,
+			Key:  "instances/" + instanceID + "/services/" + serviceType,
+		},
+	}
+	for _, kv := range kvs {
+		ops = append(ops, &consul.KVTxnOp{
+			Verb:  consul.KVSet,
+			Key:   "instances/" + instanceID + "/services/" + serviceType + "/" + kv.Key,
+			Value: []byte(kv.Value),
+		})
+	}
+	ok, _, _, err := kv.Txn(ops, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if !ok {
+		return nil, errors.New("could not configure service")
+	}
+
+	service, err := GetService(consulClient, instanceID, serviceType)
+	if err != nil {
+		return nil, err
+	}
+
+	return service, nil
 }
 
 // RemoveService removes a service from Consul

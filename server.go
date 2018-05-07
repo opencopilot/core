@@ -101,6 +101,46 @@ func (s *server) AddService(ctx context.Context, in *pb.AddServiceRequest) (*pb.
 	return instanceMessage, nil
 }
 
+func (s *server) GetService(ctx context.Context, in *pb.GetServiceRequest) (*pb.Service, error) {
+	if authed := VerifyAuthentication(in.Auth); authed == false {
+		return nil, status.Errorf(codes.PermissionDenied, "Invalid authentication")
+	}
+
+	if in.Auth.Provider != pb.Provider_PACKET {
+		return nil, errors.New("Invalid auth provider")
+	}
+
+	service, err := instance.GetService(s.consulClient, in.InstanceId, in.ServiceType)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.Service{
+		Type:   service.Type,
+		Config: service.Config,
+	}, nil
+}
+
+func (s *server) ConfigureService(ctx context.Context, in *pb.ConfigureServiceRequest) (*pb.Service, error) {
+	if authed := VerifyAuthentication(in.Auth); authed == false {
+		return nil, status.Errorf(codes.PermissionDenied, "Invalid authentication")
+	}
+
+	if in.Auth.Provider != pb.Provider_PACKET {
+		return nil, errors.New("Invalid auth provider")
+	}
+
+	service, err := instance.ConfigureService(s.consulClient, in.InstanceId, in.Service.Type, in.Service.Config)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.Service{
+		Type:   service.Type,
+		Config: service.Config,
+	}, nil
+}
+
 func (s *server) RemoveService(ctx context.Context, in *pb.RemoveServiceRequest) (*pb.Instance, error) {
 	if authed := VerifyAuthentication(in.Auth); authed == false {
 		return nil, status.Errorf(codes.PermissionDenied, "Invalid authentication")

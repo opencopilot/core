@@ -8,8 +8,9 @@ service Core {
     rpc GetInstance(GetInstanceRequest) returns (Instance) {}
     
     rpc AddService(AddServiceRequest) returns (Instance) {}
+    rpc GetService(GetServiceRequest) returns (Service) {}
+    rpc ConfigureService(ConfigureServiceRequest) returns (Service) {}
     rpc RemoveService(RemoveServiceRequest) returns (Instance) {}
-    // rpc ConfigureService(ConfigureServiceRequest) returns (Instance) {}
 }
 
 enum Provider {
@@ -49,17 +50,23 @@ message AddServiceRequest {
     Service service = 3;
 }
 
-message RemoveServiceRequest {
+message GetServiceRequest {
     Auth auth = 1;
     string instance_id = 2;
     string service_type = 3;
 }
 
-// message ConfigureServiceRequest {
-//     Auth auth = 1;
-//     string instance_id = 2;
-//     Service service = 3;
-// }
+message ConfigureServiceRequest {
+    Auth auth = 1;
+    string instance_id = 2;
+    Service service = 3;
+}
+
+message RemoveServiceRequest {
+    Auth auth = 1;
+    string instance_id = 2;
+    string service_type = 3;
+}
 
 message Instance {
     string id = 1;
