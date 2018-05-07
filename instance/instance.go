@@ -227,9 +227,44 @@ func CreateInstance(consulClient consul.Client, instanceParams CreateInstanceReq
 	return instance, nil
 }
 
+// SetInstanceFields sets instance/instanceID/fieldName to fieldValue
+func (i *Instance) SetInstanceFields(consulClient consul.Client, instanceFields map[string]string) (*Instance, error) {
+	// TODO add some sanity checks - only allow certain fields to be set?
+	// ensure that instance exists first?
+	kv := consulClient.KV()
+
+	ops := consul.KVTxnOps{}
+
+	for field, value := range instanceFields {
+		ops = append(ops, &consul.KVTxnOp{
+			Verb:  consul.KVSet,
+			Key:   "instances/" + i.ID + "/" + field,
+			Value: []byte(value),
+		})
+	}
+
+	ok, _, _, err := kv.Txn(ops, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if !ok {
+		return nil, errors.New("Could not set fields in consul")
+	}
+
+	instance, err := i.GetInstance(consulClient)
+	if err != nil {
+		return nil, err
+	}
+
+	return instance, nil
+}
+
 // AddService adds a service in consul
 func AddService(consulClient consul.Client, instanceID, service, config string) (*Instance, error) {
 	kv := consulClient.KV()
+
+	// TODO: throw error if service already exists
 
 	// TODO: add a check to handle case when config is empty object. Right now, if there's no config, no service is created.
 	kvs, err := consulkvjson.ToKVs([]byte(config))

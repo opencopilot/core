@@ -18,37 +18,11 @@ var (
 
 // GetPacketInstance gets an instance by ID
 func GetPacketInstance(consulClient consul.Client, in *pb.GetInstanceRequest) (*pb.Instance, error) {
-	// kv := consulClient.KV()
 
 	i, err := instance.NewInstance(consulClient, in.InstanceId)
 	if err != nil {
 		return nil, err
 	}
-
-	// services := make([]*pb.Service, 0)
-	// for _, service := range i.Services {
-	// 	config, _, err := kv.List("instances/"+i.ID+"/services/"+service.Type+"/", nil)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-
-	// 	configMap, err := consulkvjson.ConsulKVsToJSON(config)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-
-	// 	configJSON, err := json.Marshal(configMap)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-
-	// 	log.Printf("%s", configJSON)
-
-	// 	services = append(services, &pb.Service{
-	// 		Type:   service.Type,
-	// 		Config: string(configJSON),
-	// 	})
-	// }
 
 	instanceMessage, err := i.ToMessage()
 	if err != nil {
@@ -70,6 +44,16 @@ func CreatePacketInstance(consulClient consul.Client, in *pb.CreateInstanceReque
 	// TODO: figure this out...
 	projID := PacketProjectID
 
+	instance, err := instance.CreateInstance(consulClient, instance.CreateInstanceRequest{
+		ID:       id.String(),
+		Owner:    projID,
+		Device:   "",
+		Provider: "PACKET",
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	createReq := packet.DeviceCreateRequest{
 		Hostname:     "test-provision-" + id.String(),
 		ProjectID:    projID,
@@ -83,11 +67,8 @@ func CreatePacketInstance(consulClient consul.Client, in *pb.CreateInstanceReque
 		return nil, err
 	}
 
-	instance, err := instance.CreateInstance(consulClient, instance.CreateInstanceRequest{
-		ID:       id.String(),
-		Owner:    projID,
-		Device:   device.ID,
-		Provider: "PACKET",
+	_, err = instance.SetInstanceFields(consulClient, map[string]string{
+		"device": device.ID,
 	})
 	if err != nil {
 		return nil, err
