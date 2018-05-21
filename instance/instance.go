@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
-	"strings"
 
 	"github.com/buger/jsonparser"
 
@@ -62,7 +61,7 @@ func (p *Provider) String() (string, error) {
 }
 
 // NewInstance returns a new instance
-func NewInstance(consulClient consul.Client, id string) (*Instance, error) {
+func NewInstance(consulClient *consul.Client, id string) (*Instance, error) {
 	i := Instance{
 		ID: id,
 	}
@@ -119,7 +118,7 @@ func (i *Instance) ToMessage() (*pb.Instance, error) {
 }
 
 // GetInstance gets instance info
-func (i *Instance) GetInstance(consulClient consul.Client) (*Instance, error) {
+func (i *Instance) GetInstance(consulClient *consul.Client) (*Instance, error) {
 	kv := consulClient.KV()
 	kvs, _, err := kv.List(i.instancePrefix(), nil)
 	if err != nil {
@@ -131,12 +130,12 @@ func (i *Instance) GetInstance(consulClient consul.Client) (*Instance, error) {
 		return nil, err
 	}
 
-	jsonString, err := json.Marshal(m)
+	marshalledJSON, err := json.Marshal(m)
 	if err != nil {
 		return nil, err
 	}
 
-	owner, dataType, _, err := jsonparser.Get(jsonString, "instances", i.ID, "owner")
+	owner, dataType, _, err := jsonparser.Get(marshalledJSON, "instances", i.ID, "owner")
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +143,7 @@ func (i *Instance) GetInstance(consulClient consul.Client) (*Instance, error) {
 		owner = nil
 	}
 
-	device, dataType, _, err := jsonparser.Get(jsonString, "instances", i.ID, "device")
+	device, dataType, _, err := jsonparser.Get(marshalledJSON, "instances", i.ID, "device")
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +151,7 @@ func (i *Instance) GetInstance(consulClient consul.Client) (*Instance, error) {
 		device = nil
 	}
 
-	provider, dataType, _, err := jsonparser.Get(jsonString, "instances", i.ID, "provider")
+	provider, dataType, _, err := jsonparser.Get(marshalledJSON, "instances", i.ID, "provider")
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +160,7 @@ func (i *Instance) GetInstance(consulClient consul.Client) (*Instance, error) {
 	}
 
 	serviceList := make([]*Service, 0)
-	services, dataType, _, _ := jsonparser.Get(jsonString, "instances", i.ID, "services")
+	services, dataType, _, _ := jsonparser.Get(marshalledJSON, "instances", i.ID, "services")
 	if dataType == jsonparser.NotExist {
 		services = nil
 	} else {
@@ -189,7 +188,7 @@ func (i *Instance) GetInstance(consulClient consul.Client) (*Instance, error) {
 }
 
 // CreateInstance creates the key/value pairs for a new instance in Consul
-func CreateInstance(consulClient consul.Client, instanceParams CreateInstanceRequest) (*Instance, error) {
+func CreateInstance(consulClient *consul.Client, instanceParams CreateInstanceRequest) (*Instance, error) {
 	kv := consulClient.KV()
 
 	ops := consul.KVTxnOps{
@@ -228,8 +227,9 @@ func CreateInstance(consulClient consul.Client, instanceParams CreateInstanceReq
 }
 
 // DestroyInstance removes an instance from Consul
-func (i *Instance) DestroyInstance(consulClient consul.Client) error {
+func (i *Instance) DestroyInstance(consulClient *consul.Client) error {
 	kv := consulClient.KV()
+	// acl := consulClient.ACL()
 
 	ops := consul.KVTxnOps{
 		&consul.KVTxnOp{
@@ -242,6 +242,8 @@ func (i *Instance) DestroyInstance(consulClient consul.Client) error {
 		return err
 	}
 
+	// TODO delete corresponding ACL from consul
+
 	if !ok {
 		return errors.New("Could not remove instance in Consul")
 	}
@@ -250,7 +252,7 @@ func (i *Instance) DestroyInstance(consulClient consul.Client) error {
 }
 
 // SetInstanceFields sets instance/instanceID/fieldName to fieldValue
-func (i *Instance) SetInstanceFields(consulClient consul.Client, instanceFields map[string]string) (*Instance, error) {
+func (i *Instance) SetInstanceFields(consulClient *consul.Client, instanceFields map[string]string) (*Instance, error) {
 	// TODO add some sanity checks - only allow certain fields to be set?
 	// ensure that instance exists first?
 	kv := consulClient.KV()
@@ -283,7 +285,7 @@ func (i *Instance) SetInstanceFields(consulClient consul.Client, instanceFields 
 }
 
 // AddService adds a service in consul
-func AddService(consulClient consul.Client, instanceID, service, config string) (*Instance, error) {
+func AddService(consulClient *consul.Client, instanceID, service, config string) (*Instance, error) {
 	kv := consulClient.KV()
 
 	// throw error if service already exists
@@ -329,7 +331,7 @@ func AddService(consulClient consul.Client, instanceID, service, config string) 
 }
 
 // GetService returns the service requested
-func GetService(consulClient consul.Client, instanceID, serviceType string) (*Service, error) {
+func GetService(consulClient *consul.Client, instanceID, serviceType string) (*Service, error) {
 	kv := consulClient.KV()
 	serviceKVPairs, _, err := kv.List("instances/"+instanceID+"/services/"+serviceType, nil)
 	if err != nil {
@@ -342,8 +344,8 @@ func GetService(consulClient consul.Client, instanceID, serviceType string) (*Se
 	if err != nil {
 		return nil, err
 	}
-	serviceJSONString, err := json.Marshal(serviceJSON)
-	config, dataType, _, err := jsonparser.Get(serviceJSONString, "instances", instanceID, "services", serviceType)
+	serviceJSONMarshalled, err := json.Marshal(serviceJSON)
+	config, dataType, _, err := jsonparser.Get(serviceJSONMarshalled, "instances", instanceID, "services", serviceType)
 	if err != nil {
 		return nil, err
 	}
@@ -358,7 +360,7 @@ func GetService(consulClient consul.Client, instanceID, serviceType string) (*Se
 }
 
 // ConfigureService sets the configuration for a service in Consul
-func ConfigureService(consulClient consul.Client, instanceID, serviceType, config string) (*Service, error) {
+func ConfigureService(consulClient *consul.Client, instanceID, serviceType, config string) (*Service, error) {
 	kv := consulClient.KV()
 	s, err := GetService(consulClient, instanceID, serviceType)
 	if err != nil {
@@ -404,7 +406,7 @@ func ConfigureService(consulClient consul.Client, instanceID, serviceType, confi
 }
 
 // RemoveService removes a service from Consul
-func RemoveService(consulClient consul.Client, instanceID, service string) (*Instance, error) {
+func RemoveService(consulClient *consul.Client, instanceID, service string) (*Instance, error) {
 	kv := consulClient.KV()
 
 	ops := consul.KVTxnOps{
@@ -429,26 +431,4 @@ func RemoveService(consulClient consul.Client, instanceID, service string) (*Ins
 		return nil, err
 	}
 	return instance, nil
-}
-
-// ListInstances lists all instances from Consul
-func ListInstances(consulClient consul.Client) ([]*Instance, error) {
-	kv := consulClient.KV()
-	keys, _, err := kv.Keys("instances/", "/", nil)
-	if err != nil {
-		return nil, err
-	}
-
-	instances := make([]*Instance, 0)
-
-	for _, key := range keys {
-		instance := strings.Replace(key, "instances/", "", 1)
-		instanceID := strings.Replace(instance, "/", "", 1)
-		i, err := NewInstance(consulClient, instanceID)
-		if err != nil {
-			log.Fatal(err)
-		}
-		instances = append(instances, i)
-	}
-	return instances, nil
 }

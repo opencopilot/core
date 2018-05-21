@@ -15,12 +15,18 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/tags"
 
 	consul "github.com/hashicorp/consul/api"
+	"github.com/opencopilot/core/bootstrap"
 	pb "github.com/opencopilot/core/core"
 )
 
 const port = ":50060"
 
-func startGRPC() {
+var (
+	// ConsulEncrypt is the encryption key for consul
+	ConsulEncrypt = os.Getenv("CONSUL_ENCRYPT")
+)
+
+func startGRPC(consulCli *consul.Client) {
 	lis, err := net.Listen("tcp", port)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
@@ -52,18 +58,8 @@ func startGRPC() {
 		)),
 	)
 
-	consulClientConfig := consul.DefaultConfig()
-	if os.Getenv("ENV") == "dev" {
-		consulClientConfig.Address = "host.docker.internal:8500"
-	}
-
-	consulCli, err := consul.NewClient(consulClientConfig)
-	if err != nil {
-		log.Fatalf("failed to setup consul client on gRPC server")
-	}
-
 	pb.RegisterCoreServer(s, &server{
-		consulClient: *consulCli,
+		consulClient: consulCli,
 	})
 	// Register reflection service on gRPC server.
 	reflection.Register(s)
@@ -74,6 +70,37 @@ func startGRPC() {
 }
 
 func main() {
-	log.Println("Starting core gRPC...")
-	startGRPC()
+	consulClientConfig := consul.DefaultConfig()
+	if os.Getenv("ENV") == "dev" {
+		consulClientConfig.Address = "host.docker.internal:8500"
+	}
+
+	if os.Getenv("CONSUL_ADDRESS") != "" {
+		consulClientConfig.Address = os.Getenv("CONSUL_ADDRESS")
+	}
+
+	if os.Getenv("CONSUL_TOKEN") != "" {
+		consulClientConfig.Token = os.Getenv("CONSUL_TOKEN")
+	}
+
+	if ConsulEncrypt == "" {
+		log.Fatalf("CONSUL_ENCRYPT env not provided")
+	}
+
+	if PacketProjectID == "" {
+		log.Fatalf("PACKET_PROJECT_ID env not provided")
+	}
+
+	consulCli, err := consul.NewClient(consulClientConfig)
+	if err != nil {
+		log.Fatalf("failed to setup consul client on gRPC server")
+	}
+
+	log.Println("Starting core...")
+	go startGRPC(consulCli)
+
+	log.Println("Starting bootstrap HTTP server")
+	bootstrap.Serve(consulCli, map[string]interface{}{
+		"consul_encrypt": ConsulEncrypt,
+	})
 }

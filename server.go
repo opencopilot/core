@@ -12,11 +12,11 @@ import (
 )
 
 type server struct {
-	consulClient consul.Client
+	consulClient *consul.Client
 }
 
 func (s *server) GetInstance(ctx context.Context, in *pb.GetInstanceRequest) (*pb.Instance, error) {
-	if authed := VerifyAuthentication(in.Auth); authed == false {
+	if !VerifyAuthentication(in.Auth) {
 		return nil, status.Errorf(codes.PermissionDenied, "Invalid authentication")
 	}
 
@@ -29,7 +29,7 @@ func (s *server) GetInstance(ctx context.Context, in *pb.GetInstanceRequest) (*p
 }
 
 func (s *server) CreateInstance(ctx context.Context, in *pb.CreateInstanceRequest) (*pb.Instance, error) {
-	if authed := VerifyAuthentication(in.Auth); authed == false {
+	if !VerifyAuthentication(in.Auth) {
 		return nil, status.Errorf(codes.PermissionDenied, "Invalid authentication")
 	}
 
@@ -42,7 +42,7 @@ func (s *server) CreateInstance(ctx context.Context, in *pb.CreateInstanceReques
 }
 
 func (s *server) DestroyInstance(ctx context.Context, in *pb.DestroyInstanceRequest) (*pb.DestroyInstanceResponse, error) {
-	if authed := VerifyAuthentication(in.Auth); authed == false {
+	if !VerifyAuthentication(in.Auth) {
 		return nil, status.Errorf(codes.PermissionDenied, "Invalid authentication")
 	}
 
@@ -54,33 +54,8 @@ func (s *server) DestroyInstance(ctx context.Context, in *pb.DestroyInstanceRequ
 	return res, err
 }
 
-// TODO: this needs more thought - it's an admin only function, so what type of auth should it require?
-// Does that auth permit listing instances across providers?
-func (s *server) ListInstances(in *pb.ListInstancesRequest, stream pb.Core_ListInstancesServer) error {
-	// if authed := VerifyAuthentication(in.Auth); authed == false {
-	// 	return nil, status.Errorf(codes.PermissionDenied, "Invalid authentication")
-	// }
-
-	instances, err := instance.ListInstances(s.consulClient)
-	if err != nil {
-		return err
-	}
-	if len(instances) == 0 {
-		return nil
-	}
-	for _, instance := range instances {
-		instanceMessage, err := instance.ToMessage()
-		if err != nil {
-			return err
-		}
-		stream.Send(instanceMessage)
-	}
-
-	return nil
-}
-
 func (s *server) AddService(ctx context.Context, in *pb.AddServiceRequest) (*pb.Instance, error) {
-	if authed := VerifyAuthentication(in.Auth); authed == false {
+	if !VerifyAuthentication(in.Auth) {
 		return nil, status.Errorf(codes.PermissionDenied, "Invalid authentication")
 	}
 
@@ -102,7 +77,7 @@ func (s *server) AddService(ctx context.Context, in *pb.AddServiceRequest) (*pb.
 }
 
 func (s *server) GetService(ctx context.Context, in *pb.GetServiceRequest) (*pb.Service, error) {
-	if authed := VerifyAuthentication(in.Auth); authed == false {
+	if !VerifyAuthentication(in.Auth) {
 		return nil, status.Errorf(codes.PermissionDenied, "Invalid authentication")
 	}
 
@@ -122,7 +97,7 @@ func (s *server) GetService(ctx context.Context, in *pb.GetServiceRequest) (*pb.
 }
 
 func (s *server) ConfigureService(ctx context.Context, in *pb.ConfigureServiceRequest) (*pb.Service, error) {
-	if authed := VerifyAuthentication(in.Auth); authed == false {
+	if !VerifyAuthentication(in.Auth) {
 		return nil, status.Errorf(codes.PermissionDenied, "Invalid authentication")
 	}
 
@@ -142,7 +117,7 @@ func (s *server) ConfigureService(ctx context.Context, in *pb.ConfigureServiceRe
 }
 
 func (s *server) RemoveService(ctx context.Context, in *pb.RemoveServiceRequest) (*pb.Instance, error) {
-	if authed := VerifyAuthentication(in.Auth); authed == false {
+	if !VerifyAuthentication(in.Auth) {
 		return nil, status.Errorf(codes.PermissionDenied, "Invalid authentication")
 	}
 

@@ -2,7 +2,6 @@ syntax = "proto3";
 package opencopilot;
 
 service Core {
-    rpc ListInstances(ListInstancesRequest) returns (stream Instance) {}
     rpc CreateInstance(CreateInstanceRequest) returns (Instance) {}
     rpc DestroyInstance(DestroyInstanceRequest) returns (DestroyInstanceResponse) {}
     rpc GetInstance(GetInstanceRequest) returns (Instance) {}
@@ -20,10 +19,6 @@ enum Provider {
 message Auth {
     Provider provider = 1;
     string payload = 2;
-}
-
-message ListInstancesRequest {
-    Auth auth = 1;
 }
 
 message CreateInstanceRequest {
