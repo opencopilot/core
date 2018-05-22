@@ -63,7 +63,12 @@ func (s *server) AddService(ctx context.Context, in *pb.AddServiceRequest) (*pb.
 		return nil, errors.New("Invalid auth provider")
 	}
 
-	i, err := instance.AddService(s.consulClient, in.InstanceId, in.Service.Type, in.Service.Config)
+	i, err := instance.NewInstance(s.consulClient, in.InstanceId)
+	if err != nil {
+		return nil, err
+	}
+
+	i, err = i.AddService(s.consulClient, in.Service.Type, in.Service.Config)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +90,12 @@ func (s *server) GetService(ctx context.Context, in *pb.GetServiceRequest) (*pb.
 		return nil, errors.New("Invalid auth provider")
 	}
 
-	service, err := instance.GetService(s.consulClient, in.InstanceId, in.ServiceType)
+	i, err := instance.NewInstance(s.consulClient, in.InstanceId)
+	if err != nil {
+		return nil, err
+	}
+
+	service, err := i.GetService(s.consulClient, in.ServiceType)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +115,12 @@ func (s *server) ConfigureService(ctx context.Context, in *pb.ConfigureServiceRe
 		return nil, errors.New("Invalid auth provider")
 	}
 
-	service, err := instance.ConfigureService(s.consulClient, in.InstanceId, in.Service.Type, in.Service.Config)
+	i, err := instance.NewInstance(s.consulClient, in.InstanceId)
+	if err != nil {
+		return nil, err
+	}
+
+	service, err := i.ConfigureService(s.consulClient, in.Service.Type, in.Service.Config)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +140,12 @@ func (s *server) RemoveService(ctx context.Context, in *pb.RemoveServiceRequest)
 		return nil, errors.New("Invalid auth provider")
 	}
 
-	i, err := instance.RemoveService(s.consulClient, in.InstanceId, in.ServiceType)
+	i, err := instance.NewInstance(s.consulClient, in.InstanceId)
+	if err != nil {
+		return nil, err
+	}
+
+	i, err = i.RemoveService(s.consulClient, in.ServiceType)
 	if err != nil {
 		return nil, err
 	}
