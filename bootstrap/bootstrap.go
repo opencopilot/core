@@ -86,5 +86,5 @@ func Serve(consulCli *consul.Client, payload map[string]interface{}) {
 	}
 	router.GET("/bootstrap/:instanceId", b.handler)
 
-	log.Fatal(http.ListenAndServe(":8080", router))
+	log.Fatal(http.ListenAndServe(":5000", router))
 }
