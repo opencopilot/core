@@ -301,6 +301,11 @@ func (i *Instance) AddService(consulClient *consul.Client, service, config strin
 		return nil, errors.New("Could not set service config")
 	}
 
+	i, err = i.GetInstance(consulClient)
+	if err != nil {
+		return nil, err
+	}
+
 	return i, nil
 }
 
@@ -401,6 +406,11 @@ func (i *Instance) RemoveService(consulClient *consul.Client, service string) (*
 
 	if !ok {
 		return nil, errors.New("Could not remove service")
+	}
+
+	i, err = i.GetInstance(consulClient)
+	if err != nil {
+		return nil, err
 	}
 
 	return i, nil

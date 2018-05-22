@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"io/ioutil"
 	"os"
 
 	"github.com/google/uuid"
@@ -48,7 +49,7 @@ func CreatePacketInstance(consulClient *consul.Client, in *pb.CreateInstanceRequ
 	instance, err := instance.CreateInstance(consulClient, instance.CreateInstanceRequest{
 		ID:       id.String(),
 		Owner:    projID,
-		Device:   "",
+		Device:   "", // can't set this yet because we don't know what the device ID is until it's provisioned
 		Provider: "PACKET",
 	})
 	if err != nil {
@@ -73,7 +74,12 @@ func CreatePacketInstance(consulClient *consul.Client, in *pb.CreateInstanceRequ
 		},
 	}
 
-	customDataJSONString, err := json.Marshal(customData)
+	customDataJSON, err := json.Marshal(customData)
+	if err != nil {
+		return nil, err
+	}
+
+	userDataString, err := ioutil.ReadFile("./assets/packet.userdata.sh")
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +91,8 @@ func CreatePacketInstance(consulClient *consul.Client, in *pb.CreateInstanceRequ
 		Plan:         "baremetal_2",
 		OS:           "ubuntu_16_04",
 		BillingCycle: "hourly",
-		CustomData:   string(customDataJSONString),
+		CustomData:   string(customDataJSON),
+		UserData:     string(userDataString),
 	}
 	device, _, err := packetClient.Devices.Create(&createReq)
 	if err != nil {
