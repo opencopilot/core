@@ -71,9 +71,9 @@ func CreatePacketInstance(consulClient *consul.Client, in *pb.CreateInstanceRequ
 
 	customData := map[string]interface{}{
 		"COPILOT": map[string]interface{}{
-			"INSTANCE_ID":  id.String(),
-			"CONSUL_TOKEN": token,
-			// "CONSUL_ENCRYPT": ConsulEncrypt,
+			"INSTANCE_ID":    id.String(),
+			"CONSUL_TOKEN":   token,         // TODO send this via http ip authed
+			"CONSUL_ENCRYPT": ConsulEncrypt, // TODO send this via http ip authed
 		},
 	}
 

@@ -28,6 +28,8 @@ var (
 	HTTPBindAddress = os.Getenv("HTTP_BIND_ADDRESS")
 	// TLSDirectory is the path to the directory holding certs/key for TLS with consul
 	TLSDirectory = os.Getenv("TLS_DIRECTORY")
+	// PublicAddress is where core can be reached
+	PublicAddress = os.Getenv("PUBLIC_ADDRESS")
 )
 
 func startGRPC(consulCli *consul.Client) {
@@ -102,6 +104,10 @@ func main() {
 	if TLSDirectory == "" {
 		TLSDirectory = "/opt/consul/tls/"
 	}
+
+	// if PublicAddress == "" {
+	// 	log.Fatalf("PUBLIC_ADDRESS not provided")
+	// }
 
 	// consulClientConfig.TLSConfig = consul.TLSConfig{
 	// 	CAFile:   path.Join(TLSDirectory, "consul-ca.crt"),
