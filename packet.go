@@ -74,6 +74,7 @@ func CreatePacketInstance(consulClient *consul.Client, in *pb.CreateInstanceRequ
 			"INSTANCE_ID":    id.String(),
 			"CONSUL_TOKEN":   token,         // TODO send this via http ip authed
 			"CONSUL_ENCRYPT": ConsulEncrypt, // TODO send this via http ip authed
+			"CORE_ADDR":      PublicAddress,
 		},
 	}
 

@@ -7,11 +7,12 @@ sh get-docker.sh
 mkdir /etc/consul
 mkdir /opt/consul
 
-# COPILOT_CORE_ADDR=$(curl -sS metadata.packet.net/metadata | jq -r .customdata.COPILOT.CORE_ADDR)
+COPILOT_CORE_ADDR=$(curl -sS metadata.packet.net/metadata | jq -r .customdata.COPILOT.CORE_ADDR)
 CONSUL_ENCRYPT=$(curl -sS metadata.packet.net/metadata | jq -r .customdata.COPILOT.CONSUL_ENCRYPT)
 CONSUL_TOKEN=$(curl -sS metadata.packet.net/metadata | jq -r .customdata.COPILOT.CONSUL_TOKEN)
 INSTANCE_ID=$(curl -sS metadata.packet.net/metadata | jq -r .customdata.COPILOT.INSTANCE_ID)
 FACILITY=$(curl -sS metadata.packet.net/metadata | jq -r .facility)
+
 
 cat > /etc/consul/config.json <<EOF
 {
@@ -22,11 +23,10 @@ cat > /etc/consul/config.json <<EOF
     "server": false,
     "encrypt": "$(echo $CONSUL_ENCRYPT)",
     "acl_datacenter": "ewr1",
-    "acl_token": "$(echo CONSUL_TOKEN)",
-    "verify_outgoing": true,
-    "ca_file": "/opt/consul/tls/consul-ca.crt",
-    "cert_file": "/opt/consul/tls/consul.crt",
-    "key_file": "/opt/consul/tls/consul.key"
+    "acl_token": "$(echo $CONSUL_TOKEN)"
+    "retry_join": [
+        "$(echo COPILOT_CORE_ADDR)"
+    ]
 }
 EOF
 
@@ -39,7 +39,7 @@ docker run \
     -v /opt/consul:/opt/consul \
     -d \
     --restart always \
-    consul agent -bind="0.0.0.0" -advertise=$CONSUL_ADVERTISE_ADDRESS -config-file="/etc/consul/config.json"
+    consul agent -bind="127.0.0.1" -advertise=$CONSUL_ADVERTISE_ADDRESS -config-file="/etc/consul/config.json"
 
 ### Start Agent ###
 docker run \
