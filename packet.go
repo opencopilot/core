@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
+	"path/filepath"
 
 	"github.com/google/uuid"
 	consul "github.com/hashicorp/consul/api"
@@ -69,12 +70,30 @@ func CreatePacketInstance(consulClient *consul.Client, in *pb.CreateInstanceRequ
 		return nil, err
 	}
 
+	ca, err := ioutil.ReadFile(filepath.Join(TLSDirectory, "consul-ca.crt"))
+	if err != nil {
+		return nil, err
+	}
+
+	cert, err := ioutil.ReadFile(filepath.Join(TLSDirectory, "consul.crt"))
+	if err != nil {
+		return nil, err
+	}
+
+	key, err := ioutil.ReadFile(filepath.Join(TLSDirectory, "consul.key"))
+	if err != nil {
+		return nil, err
+	}
+
 	customData := map[string]interface{}{
 		"COPILOT": map[string]interface{}{
 			"INSTANCE_ID":    id.String(),
-			"CONSUL_TOKEN":   token,         // TODO send this via http ip authed
-			"CONSUL_ENCRYPT": ConsulEncrypt, // TODO send this via http ip authed
+			"CONSUL_TOKEN":   token, // TODO send all the following via http ip auth server
+			"CONSUL_ENCRYPT": ConsulEncrypt,
 			"CORE_ADDR":      PublicAddress,
+			"CONSUL_CA":      ca,
+			"CONSUL_CERT":    cert,
+			"CONSUL_KEY":     key,
 		},
 	}
 

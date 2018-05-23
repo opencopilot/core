@@ -15,6 +15,10 @@ INSTANCE_ID=$(curl -sS metadata.packet.net/metadata | jq -r .customdata.COPILOT.
 FACILITY=$(curl -sS metadata.packet.net/metadata | jq -r .facility)
 CONSUL_TLS_DIR=/opt/consul/tls
 
+curl -sS metadata.packet.net/metadata | jq -r .customdata.COPILOT.CONSUL_CA >> $CONSUL_TLS_DIR/consul-ca.crt
+curl -sS metadata.packet.net/metadata | jq -r .customdata.COPILOT.CONSUL_CERT >> $CONSUL_TLS_DIR/consul.crt
+curl -sS metadata.packet.net/metadata | jq -r .customdata.COPILOT.CONSUL_KEY >> $CONSUL_TLS_DIR/consul.key
+
 cat > /etc/consul/config.json <<EOF
 {
     "datacenter": "$FACILITY",
