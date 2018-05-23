@@ -6,27 +6,31 @@ sh get-docker.sh
 
 mkdir /etc/consul
 mkdir /opt/consul
+mkdir /opt/consul/tls
 
 COPILOT_CORE_ADDR=$(curl -sS metadata.packet.net/metadata | jq -r .customdata.COPILOT.CORE_ADDR)
 CONSUL_ENCRYPT=$(curl -sS metadata.packet.net/metadata | jq -r .customdata.COPILOT.CONSUL_ENCRYPT)
 CONSUL_TOKEN=$(curl -sS metadata.packet.net/metadata | jq -r .customdata.COPILOT.CONSUL_TOKEN)
 INSTANCE_ID=$(curl -sS metadata.packet.net/metadata | jq -r .customdata.COPILOT.INSTANCE_ID)
 FACILITY=$(curl -sS metadata.packet.net/metadata | jq -r .facility)
-
+CONSUL_TLS_DIR=/opt/consul/tls
 
 cat > /etc/consul/config.json <<EOF
 {
-    "datacenter": "$(echo $FACILITY)",
+    "datacenter": "$FACILITY",
     "data_dir": "/opt/consul",
     "log_level": "DEBUG",
-    "node_name": "$(echo $INSTANCE_ID)",
+    "node_name": "$INSTANCE_ID",
     "server": false,
-    "encrypt": "$(echo $CONSUL_ENCRYPT)",
+    "encrypt": "$CONSUL_ENCRYPT",
     "acl_datacenter": "ewr1",
-    "acl_token": "$(echo $CONSUL_TOKEN)"
+    "acl_token": "$CONSUL_TOKEN",
     "retry_join": [
-        "$(echo COPILOT_CORE_ADDR)"
-    ]
+        "$(echo $COPILOT_CORE_ADDR)"
+    ],
+    "ca_file": "$CONSUL_TLS_DIR/consul-ca.crt",
+    "cert_file": "$CONSUL_TLS_DIR/consul.crt",
+    "key_file": "$CONSUL_TLS_DIR/consul.key"
 }
 EOF
 
