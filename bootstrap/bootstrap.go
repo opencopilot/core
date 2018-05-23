@@ -78,7 +78,7 @@ func verify(consulCli *consul.Client, i *instance.Instance, clientAddr net.IP, a
 }
 
 // Serve runs the http bootstrap server
-func Serve(consulCli *consul.Client, payload map[string]interface{}) {
+func Serve(consulCli *consul.Client, payload map[string]interface{}, bindAddress string) {
 	router := httprouter.New()
 	b := &bootstrap{
 		consulCli: consulCli,
@@ -86,5 +86,5 @@ func Serve(consulCli *consul.Client, payload map[string]interface{}) {
 	}
 	router.GET("/bootstrap/:instanceId", b.handler)
 
-	log.Fatal(http.ListenAndServe(":5000", router))
+	log.Fatal(http.ListenAndServe(bindAddress, router))
 }

@@ -19,15 +19,19 @@ import (
 	pb "github.com/opencopilot/core/core"
 )
 
-const port = ":50060"
-
 var (
 	// ConsulEncrypt is the encryption key for consul
 	ConsulEncrypt = os.Getenv("CONSUL_ENCRYPT")
+	// BindAddress is the interface and port the core should bind to for gRPC
+	BindAddress = os.Getenv("BIND_ADDRESS")
+	// HTTPBindAddress is the interface and port the core should bind to for HTTP
+	HTTPBindAddress = os.Getenv("HTTP_BIND_ADDRESS")
+	// TLSDirectory is the path to the directory holding certs/key for TLS with consul
+	TLSDirectory = os.Getenv("TLS_DIRECTORY")
 )
 
 func startGRPC(consulCli *consul.Client) {
-	lis, err := net.Listen("tcp", port)
+	lis, err := net.Listen("tcp", BindAddress)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
@@ -87,9 +91,27 @@ func main() {
 		log.Fatalf("CONSUL_ENCRYPT env not provided")
 	}
 
+	if BindAddress == "" {
+		BindAddress = "0.0.0.0:50060"
+	}
+
+	if HTTPBindAddress == "" {
+		HTTPBindAddress = "0.0.0.0:5000"
+	}
+
+	if TLSDirectory == "" {
+		TLSDirectory = "/opt/consul/tls/"
+	}
+
+	// consulClientConfig.TLSConfig = consul.TLSConfig{
+	// 	CAFile:   path.Join(TLSDirectory, "consul-ca.crt"),
+	// 	CertFile: path.Join(TLSDirectory, "consul.crt"),
+	// 	KeyFile:  path.Join(TLSDirectory, "consul.key"),
+	// }
+
 	consulCli, err := consul.NewClient(consulClientConfig)
 	if err != nil {
-		log.Fatalf("failed to setup consul client on gRPC server")
+		log.Fatalf("failed to setup consul client on gRPC server: %v", err)
 	}
 
 	log.Println("Starting core...")
@@ -98,5 +120,5 @@ func main() {
 	log.Println("Starting bootstrap HTTP server")
 	bootstrap.Serve(consulCli, map[string]interface{}{
 		"consul_encrypt": ConsulEncrypt,
-	})
+	}, HTTPBindAddress)
 }

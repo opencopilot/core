@@ -28,22 +28,18 @@ func GetPacketProjectFromAuthPayload(auth string) (string, error) {
 }
 
 // GetPacketInstance gets an instance by ID
-func GetPacketInstance(consulClient *consul.Client, in *pb.GetInstanceRequest) (*pb.Instance, error) {
+func GetPacketInstance(consulClient *consul.Client, instanceID string) (*instance.Instance, error) {
 
-	i, err := instance.NewInstance(consulClient, in.InstanceId)
+	i, err := instance.NewInstance(consulClient, instanceID)
 	if err != nil {
 		return nil, err
 	}
 
-	instanceMessage, err := i.ToMessage()
-	if err != nil {
-		return nil, err
-	}
-	return instanceMessage, nil
+	return i, nil
 }
 
 // CreatePacketInstance creates the necessary data structures in Consul for a new instance, and provisions a device on Packet
-func CreatePacketInstance(consulClient *consul.Client, in *pb.CreateInstanceRequest) (*pb.Instance, error) {
+func CreatePacketInstance(consulClient *consul.Client, in *pb.CreateInstanceRequest) (*instance.Instance, error) {
 	id := uuid.New()
 
 	packetClient := packet.NewClientWithAuth("", in.Auth.Payload, nil)
@@ -115,33 +111,32 @@ func CreatePacketInstance(consulClient *consul.Client, in *pb.CreateInstanceRequ
 		return nil, err
 	}
 
-	instanceMessage, err := instance.ToMessage()
-	return instanceMessage, nil
+	return instance, nil
 }
 
 // DestroyPacketInstance destroys a packet instance
-func DestroyPacketInstance(consulClient *consul.Client, in *pb.DestroyInstanceRequest) (*pb.DestroyInstanceResponse, error) {
+func DestroyPacketInstance(consulClient *consul.Client, in *pb.DestroyInstanceRequest) error {
 	packetClient := packet.NewClientWithAuth("", in.Auth.Payload, nil)
 
 	instance, err := instance.NewInstance(consulClient, in.InstanceId)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	device, _, err := packetClient.Devices.Get(instance.Device)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if device.State != "active" {
-		return nil, errors.New("Device is still provisioning")
+		return errors.New("Device is still provisioning")
 	}
 
 	err = instance.DestroyInstance(consulClient)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	packetClient.Devices.Delete(instance.Device)
 
-	return &pb.DestroyInstanceResponse{}, nil
+	return nil
 }

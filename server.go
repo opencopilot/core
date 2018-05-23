@@ -24,8 +24,22 @@ func (s *server) GetInstance(ctx context.Context, in *pb.GetInstanceRequest) (*p
 		return nil, errors.New("Invalid auth provider")
 	}
 
-	instance, err := GetPacketInstance(s.consulClient, in)
-	return instance, err
+	instance, err := GetPacketInstance(s.consulClient, in.InstanceId)
+	if err != nil {
+		return nil, err
+	}
+
+	canManage := CanManageInstance(in.Auth, instance)
+	if !canManage {
+		return nil, status.Errorf(codes.PermissionDenied, "Invalid authentication")
+	}
+
+	instanceMessage, err := instance.ToMessage()
+	if err != nil {
+		return nil, err
+	}
+
+	return instanceMessage, err
 }
 
 func (s *server) CreateInstance(ctx context.Context, in *pb.CreateInstanceRequest) (*pb.Instance, error) {
@@ -38,7 +52,12 @@ func (s *server) CreateInstance(ctx context.Context, in *pb.CreateInstanceReques
 	}
 
 	instance, err := CreatePacketInstance(s.consulClient, in)
-	return instance, err
+
+	instanceMessage, err := instance.ToMessage()
+	if err != nil {
+		return nil, err
+	}
+	return instanceMessage, err
 }
 
 func (s *server) DestroyInstance(ctx context.Context, in *pb.DestroyInstanceRequest) (*pb.DestroyInstanceResponse, error) {
@@ -50,8 +69,21 @@ func (s *server) DestroyInstance(ctx context.Context, in *pb.DestroyInstanceRequ
 		return nil, errors.New("Invalid auth provider")
 	}
 
-	res, err := DestroyPacketInstance(s.consulClient, in)
-	return res, err
+	instance, err := GetPacketInstance(s.consulClient, in.InstanceId)
+	if err != nil {
+		return nil, err
+	}
+
+	canManage := CanManageInstance(in.Auth, instance)
+	if !canManage {
+		return nil, status.Errorf(codes.PermissionDenied, "Invalid authentication")
+	}
+
+	err = DestroyPacketInstance(s.consulClient, in)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.DestroyInstanceResponse{}, err
 }
 
 func (s *server) AddService(ctx context.Context, in *pb.AddServiceRequest) (*pb.Instance, error) {
