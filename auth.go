@@ -13,12 +13,11 @@ type PacketAuth struct {
 
 // Verify that a given Auth payload has access to a Packet account
 func (p *PacketAuth) Verify() bool {
-	client := packet.NewClientWithAuth("", p.Payload, nil)
-	user, _, err := client.Users.Current()
+	projectID, err := GetPacketProjectFromAuthPayload(p.Payload)
 	if err != nil {
 		return false
 	}
-	return user.ID != ""
+	return projectID != ""
 }
 
 // CanManageInstance verifies that the passed in authentication can manage the specified instance, if it's a Packet instance

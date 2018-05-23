@@ -87,10 +87,6 @@ func main() {
 		log.Fatalf("CONSUL_ENCRYPT env not provided")
 	}
 
-	if PacketProjectID == "" {
-		log.Fatalf("PACKET_PROJECT_ID env not provided")
-	}
-
 	consulCli, err := consul.NewClient(consulClientConfig)
 	if err != nil {
 		log.Fatalf("failed to setup consul client on gRPC server")

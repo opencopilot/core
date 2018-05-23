@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
-	"os"
 
 	"github.com/google/uuid"
 	consul "github.com/hashicorp/consul/api"
@@ -13,10 +12,20 @@ import (
 	packet "github.com/packethost/packngo"
 )
 
-var (
-	// PacketProjectID is the packet project id where instances should be created. Figure this out...
-	PacketProjectID = os.Getenv("PACKET_PROJECT_ID")
-)
+// GetPacketProjectFromAuthPayload returns the Packet project of a project level API key
+func GetPacketProjectFromAuthPayload(auth string) (string, error) {
+	packetClient := packet.NewClientWithAuth("", auth, nil)
+	var project map[string]interface{}
+	_, err := packetClient.DoRequest("GET", "/project", "", &project)
+	if err != nil {
+		return "", err
+	}
+	projectID, ok := project["id"]
+	if !ok {
+		return "", errors.New("problem verifying project from auth")
+	}
+	return projectID.(string), nil
+}
 
 // GetPacketInstance gets an instance by ID
 func GetPacketInstance(consulClient *consul.Client, in *pb.GetInstanceRequest) (*pb.Instance, error) {
@@ -38,13 +47,11 @@ func CreatePacketInstance(consulClient *consul.Client, in *pb.CreateInstanceRequ
 	id := uuid.New()
 
 	packetClient := packet.NewClientWithAuth("", in.Auth.Payload, nil)
-	_, _, err := packetClient.Users.Current()
+
+	projID, err := GetPacketProjectFromAuthPayload(in.Auth.Payload)
 	if err != nil {
 		return nil, err
 	}
-
-	// TODO: figure this out...
-	projID := PacketProjectID
 
 	instance, err := instance.CreateInstance(consulClient, instance.CreateInstanceRequest{
 		ID:       id.String(),
@@ -88,7 +95,7 @@ func CreatePacketInstance(consulClient *consul.Client, in *pb.CreateInstanceRequ
 		Hostname:     "open-copilot-instance-" + id.String(),
 		ProjectID:    projID,
 		Facility:     "ewr1",
-		Plan:         "baremetal_2",
+		Plan:         "baremetal_1",
 		OS:           "ubuntu_16_04",
 		BillingCycle: "hourly",
 		CustomData:   string(customDataJSON),
