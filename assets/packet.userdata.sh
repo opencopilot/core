@@ -47,7 +47,7 @@ docker run \
     -v /opt/consul:/opt/consul \
     -d \
     --restart always \
-    consul agent -bind="127.0.0.1" -advertise=$CONSUL_ADVERTISE_ADDRESS -config-file="/etc/consul/config.json"
+    consul agent -bind="0.0.0.0" -advertise=$CONSUL_ADVERTISE_ADDRESS -config-file="/etc/consul/config.json"
 
 ### Start Agent ###
 docker run \
