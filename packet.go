@@ -62,9 +62,12 @@ func CreatePacketInstance(consulClient *consul.Client, in *pb.CreateInstanceRequ
 
 	acl := consulClient.ACL()
 	token, _, err := acl.Create(&consul.ACLEntry{
-		Name:  "instance-" + id.String(),
-		Type:  consul.ACLClientType,
-		Rules: `key "instances/` + id.String() + `" { policy = "read" }`,
+		Name: "instance-" + id.String(),
+		Type: consul.ACLClientType,
+		Rules: `
+			key "instances/` + id.String() + `" { policy = "read" }
+			node "` + id.String() + `" { policy = "write" }
+		`,
 	}, nil)
 	if err != nil {
 		return nil, err
