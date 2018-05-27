@@ -59,5 +59,5 @@ docker run \
     --restart always \
     -d \
     --net="host" \
-    -P
+    -P \
     quay.io/opencopilot/agent
