@@ -64,7 +64,7 @@ func CreatePacketInstance(consulClient *consul.Client, in *pb.CreateInstanceRequ
 	token, _, err := acl.Create(&consul.ACLEntry{
 		Name: "instance-" + id.String(),
 		Type: consul.ACLClientType,
-		// TODO: move this out to a file
+		// TODO: move this out to a file?
 		Rules: `key "instances/` + id.String() + `" { policy = "read" }
 node "` + id.String() + `" { policy = "write" }
 service "opencopilot-agent" { policy = "write" }

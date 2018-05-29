@@ -207,7 +207,7 @@ func CreateInstance(consulClient *consul.Client, instanceParams CreateInstanceRe
 // DestroyInstance removes an instance from Consul
 func (i *Instance) DestroyInstance(consulClient *consul.Client) error {
 	kv := consulClient.KV()
-	// acl := consulClient.ACL()
+	acl := consulClient.ACL()
 
 	ops := consul.KVTxnOps{
 		&consul.KVTxnOp{
@@ -220,10 +220,13 @@ func (i *Instance) DestroyInstance(consulClient *consul.Client) error {
 		return err
 	}
 
-	// TODO delete corresponding ACL from consul
-
 	if !ok {
 		return errors.New("Could not remove instance in Consul")
+	}
+
+	_, err := acl.Destroy("instance-"+i.ID, nil)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -274,6 +277,7 @@ func (i *Instance) AddService(consulClient *consul.Client, service, config strin
 	}
 
 	// TODO: add a check to handle case when config is empty object. Right now, if there's no config, no service is created.
+	// i.e. there should be an initial config for each service
 	kvs, err := consulkvjson.ToKVs([]byte(config))
 	if err != nil {
 		return nil, err
