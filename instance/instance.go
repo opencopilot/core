@@ -224,9 +224,18 @@ func (i *Instance) DestroyInstance(consulClient *consul.Client) error {
 		return errors.New("Could not remove instance in Consul")
 	}
 
-	_, err = acl.Destroy("instance-"+i.ID, nil)
+	tokens, _, err := acl.List()
 	if err != nil {
 		return err
+	}
+
+	for _, token := range tokens {
+		if token.Name == "instance-"+i.ID {
+			_, err = acl.Destroy(token.ID, nil)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
