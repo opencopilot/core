@@ -115,8 +115,8 @@ service "opencopilot-agent" { policy = "write" }
 	createReq := packet.DeviceCreateRequest{
 		Hostname:     "opencopilot-" + strings.Split(id.String(), "-")[0],
 		ProjectID:    projID,
-		Facility:     "ewr1",
-		Plan:         "baremetal_1",
+		Facility:     in.Region,
+		Plan:         in.Type,
 		OS:           "ubuntu_16_04",
 		BillingCycle: "hourly",
 		CustomData:   string(customDataJSON),

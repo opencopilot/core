@@ -23,6 +23,8 @@ message Auth {
 
 message CreateInstanceRequest {
     Auth auth = 1;
+    string type = 2;
+    string region = 3;
 }
 
 message DestroyInstanceRequest {
