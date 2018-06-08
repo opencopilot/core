@@ -72,3 +72,7 @@
 [prune]
   go-tests = true
   unused-packages = true
+
+[[constraint]]
+  name = "github.com/hashicorp/vault"
+  version = "0.10.1"

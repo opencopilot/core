@@ -3,7 +3,6 @@ package instance
 import (
 	"encoding/json"
 	"errors"
-	"log"
 
 	"github.com/buger/jsonparser"
 
@@ -29,8 +28,8 @@ type Service struct {
 }
 
 // ToMessage serializes a Service for gRPC
-func (s *Service) ToMessage() (*pb.Service, error) {
-	return &pb.Service{
+func (s *Service) ToMessage() (*pb.ServiceSpec, error) {
+	return &pb.ServiceSpec{
 		Type:   s.Type,
 		Config: s.Config,
 	}, nil
@@ -40,8 +39,8 @@ func (s *Service) ToMessage() (*pb.Service, error) {
 type Services []*Service
 
 // ToMessage serializes a list of Services for gRPC
-func (services Services) ToMessage() ([]*pb.Service, error) {
-	s := make([]*pb.Service, 0)
+func (services Services) ToMessage() ([]*pb.ServiceSpec, error) {
+	s := make([]*pb.ServiceSpec, 0)
 	for _, service := range services {
 		serialized, err := service.ToMessage()
 		if err != nil {
@@ -143,7 +142,6 @@ func (i *Instance) GetInstance(consulClient *consul.Client) (*Instance, error) {
 		services = nil
 	} else {
 		jsonparser.ObjectEach(services, func(service, config []byte, dataType jsonparser.ValueType, offset int) error {
-			log.Printf("%s", service)
 			serviceList = append(serviceList, &Service{
 				Type:   string(service),
 				Config: string(config),

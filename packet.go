@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"path/filepath"
+	"strings"
 
 	"github.com/google/uuid"
 	consul "github.com/hashicorp/consul/api"
@@ -112,7 +113,7 @@ service "opencopilot-agent" { policy = "write" }
 	}
 
 	createReq := packet.DeviceCreateRequest{
-		Hostname:     "open-copilot-instance-" + id.String(),
+		Hostname:     "opencopilot-" + strings.Split(id.String(), "-")[0],
 		ProjectID:    projID,
 		Facility:     "ewr1",
 		Plan:         "baremetal_1",

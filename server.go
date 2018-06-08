@@ -52,6 +52,9 @@ func (s *server) CreateInstance(ctx context.Context, in *pb.CreateInstanceReques
 	}
 
 	instance, err := CreatePacketInstance(s.consulClient, in)
+	if err != nil {
+		return nil, err
+	}
 
 	instanceMessage, err := instance.ToMessage()
 	if err != nil {
@@ -113,7 +116,7 @@ func (s *server) AddService(ctx context.Context, in *pb.AddServiceRequest) (*pb.
 	return instanceMessage, nil
 }
 
-func (s *server) GetService(ctx context.Context, in *pb.GetServiceRequest) (*pb.Service, error) {
+func (s *server) GetService(ctx context.Context, in *pb.GetServiceRequest) (*pb.ServiceSpec, error) {
 	if !VerifyAuthentication(in.Auth) {
 		return nil, status.Errorf(codes.PermissionDenied, "Invalid authentication")
 	}
@@ -132,13 +135,13 @@ func (s *server) GetService(ctx context.Context, in *pb.GetServiceRequest) (*pb.
 		return nil, err
 	}
 
-	return &pb.Service{
+	return &pb.ServiceSpec{
 		Type:   service.Type,
 		Config: service.Config,
 	}, nil
 }
 
-func (s *server) ConfigureService(ctx context.Context, in *pb.ConfigureServiceRequest) (*pb.Service, error) {
+func (s *server) ConfigureService(ctx context.Context, in *pb.ConfigureServiceRequest) (*pb.ServiceSpec, error) {
 	if !VerifyAuthentication(in.Auth) {
 		return nil, status.Errorf(codes.PermissionDenied, "Invalid authentication")
 	}
@@ -157,7 +160,7 @@ func (s *server) ConfigureService(ctx context.Context, in *pb.ConfigureServiceRe
 		return nil, err
 	}
 
-	return &pb.Service{
+	return &pb.ServiceSpec{
 		Type:   service.Type,
 		Config: service.Config,
 	}, nil

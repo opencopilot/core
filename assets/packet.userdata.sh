@@ -30,7 +30,7 @@ cat > /etc/consul/config.json <<EOF
     "acl_datacenter": "ewr1",
     "acl_token": "$CONSUL_TOKEN",
     "retry_join": [
-        "$(echo $COPILOT_CORE_ADDR)"
+        "$COPILOT_CORE_ADDR"
     ],
     "ca_file": "$CONSUL_TLS_DIR/consul-ca.crt",
     "cert_file": "$CONSUL_TLS_DIR/consul.crt",

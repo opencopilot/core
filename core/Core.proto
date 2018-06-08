@@ -7,8 +7,8 @@ service Core {
     rpc GetInstance(GetInstanceRequest) returns (Instance) {}
     
     rpc AddService(AddServiceRequest) returns (Instance) {}
-    rpc GetService(GetServiceRequest) returns (Service) {}
-    rpc ConfigureService(ConfigureServiceRequest) returns (Service) {}
+    rpc GetService(GetServiceRequest) returns (ServiceSpec) {}
+    rpc ConfigureService(ConfigureServiceRequest) returns (ServiceSpec) {}
     rpc RemoveService(RemoveServiceRequest) returns (Instance) {}
 }
 
@@ -42,7 +42,7 @@ message GetInstanceRequest {
 message AddServiceRequest {
     Auth auth = 1;
     string instance_id = 2;
-    Service service = 3;
+    ServiceSpec service = 3;
 }
 
 message GetServiceRequest {
@@ -54,7 +54,7 @@ message GetServiceRequest {
 message ConfigureServiceRequest {
     Auth auth = 1;
     string instance_id = 2;
-    Service service = 3;
+    ServiceSpec service = 3;
 }
 
 message RemoveServiceRequest {
@@ -68,10 +68,10 @@ message Instance {
     Provider provider = 2;
     string owner = 3;
     string device = 4;
-    repeated Service services = 5;
+    repeated ServiceSpec services = 5;
 }
 
-message Service {
+message ServiceSpec { // renamed from "Service" since it was causing a conflict with the ruby gRPC lib
     string type = 1;
     string config = 2;
 }
