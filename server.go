@@ -6,6 +6,7 @@ import (
 
 	consul "github.com/hashicorp/consul/api"
 	pb "github.com/opencopilot/core/core"
+	pbHealth "github.com/opencopilot/core/health"
 	"github.com/opencopilot/core/instance"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -13,6 +14,12 @@ import (
 
 type server struct {
 	consulClient *consul.Client
+}
+
+func (s *server) Check(ctx context.Context, in *pbHealth.HealthCheckRequest) (*pbHealth.HealthCheckResponse, error) {
+	return &pbHealth.HealthCheckResponse{
+		Status: pbHealth.HealthCheckResponse_SERVING,
+	}, nil
 }
 
 func (s *server) GetInstance(ctx context.Context, in *pb.GetInstanceRequest) (*pb.Instance, error) {

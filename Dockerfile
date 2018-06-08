@@ -23,6 +23,7 @@ COPY . .
 # generate gRPC
 RUN protoc -I ./core ./core/Core.proto --go_out=plugins=grpc:./core
 RUN protoc -I ./agent ./agent/Agent.proto --go_out=plugins=grpc:./agent
+RUN protoc -I ./health ./health/*.proto --go_out=plugins=grpc:./health
 
 RUN go get -v -x
 

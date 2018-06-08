@@ -17,6 +17,7 @@ import (
 	consul "github.com/hashicorp/consul/api"
 	"github.com/opencopilot/core/bootstrap"
 	pb "github.com/opencopilot/core/core"
+	pbHealth "github.com/opencopilot/core/health"
 )
 
 var (
@@ -64,14 +65,32 @@ func startGRPC(consulCli *consul.Client) {
 		)),
 	)
 
-	pb.RegisterCoreServer(s, &server{
+	coreServer := &server{
 		consulClient: consulCli,
-	})
+	}
+	pb.RegisterCoreServer(s, coreServer)
+	pbHealth.RegisterHealthServer(s, coreServer)
 	// Register reflection service on gRPC server.
 	reflection.Register(s)
 	s.Serve(lis)
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
+	}
+}
+
+func registerCoreService(consulCli *consul.Client) {
+	agent := consulCli.Agent()
+	err := agent.ServiceRegister(&consul.AgentServiceRegistration{
+		Name: "opencopilot-core",
+		Check: &consul.AgentServiceCheck{
+			CheckID:  "core-grpc",
+			Name:     "Core gRPC Health Check",
+			GRPC:     BindAddress,
+			Interval: "10s",
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
 	}
 }
 
@@ -105,20 +124,12 @@ func main() {
 		TLSDirectory = "/opt/consul/tls/"
 	}
 
-	// if PublicAddress == "" {
-	// 	log.Fatalf("PUBLIC_ADDRESS not provided")
-	// }
-
-	// consulClientConfig.TLSConfig = consul.TLSConfig{
-	// 	CAFile:   path.Join(TLSDirectory, "consul-ca.crt"),
-	// 	CertFile: path.Join(TLSDirectory, "consul.crt"),
-	// 	KeyFile:  path.Join(TLSDirectory, "consul.key"),
-	// }
-
 	consulCli, err := consul.NewClient(consulClientConfig)
 	if err != nil {
 		log.Fatalf("failed to setup consul client on gRPC server: %v", err)
 	}
+
+	registerCoreService(consulCli)
 
 	log.Println("Starting core...")
 	go startGRPC(consulCli)

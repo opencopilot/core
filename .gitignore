@@ -17,5 +17,6 @@
 
 agent/*.go
 core/*.go
+health/*.go
 cmd/
 *.dev.sh
