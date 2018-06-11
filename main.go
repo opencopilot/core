@@ -125,7 +125,7 @@ func main() {
 		TLSDirectory = "/opt/consul/tls/"
 	}
 
-	vaultCA := "/opt/consul/tls/vault-ca.crt"
+	vaultCA := "/opt/vault/tls/vault-ca.crt"
 
 	if os.Getenv("VAULT_CA") != "" {
 		vaultCA = os.Getenv("VAULT_CA")

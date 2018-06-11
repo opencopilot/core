@@ -14,7 +14,7 @@ import (
 	packet "github.com/packethost/packngo"
 )
 
-// Bootstrap
+// Bootstrap is the config for the https server used for bootstrapping managed instances
 type Bootstrap struct {
 	ConsulCli   *consul.Client
 	VaultCli    *vault.Client
@@ -60,12 +60,10 @@ func (b *Bootstrap) handler(w http.ResponseWriter, r *http.Request, ps httproute
 	}
 
 	payload := b.Payload
-	payload["bootstrap_token"] = bootstrapToken
+	payload["instance"] = instanceID
+	payload["bootstrap_token"] = bootstrapToken.Auth.ClientToken
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"instance": instanceID,
-		"payload":  payload,
-	})
+	json.NewEncoder(w).Encode(payload)
 }
 
 func verify(consulCli *consul.Client, i *instance.Instance, clientAddr net.IP, authPayload string) (bool, error) {

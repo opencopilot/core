@@ -9,15 +9,19 @@ mkdir /opt/consul
 mkdir /opt/consul/tls
 
 COPILOT_CORE_ADDR=$(curl -sS metadata.packet.net/metadata | jq -r .customdata.COPILOT.CORE_ADDR)
-CONSUL_ENCRYPT=$(curl -sS metadata.packet.net/metadata | jq -r .customdata.COPILOT.CONSUL_ENCRYPT)
-CONSUL_TOKEN=$(curl -sS metadata.packet.net/metadata | jq -r .customdata.COPILOT.CONSUL_TOKEN)
+PACKET_AUTH=$(curl -sS metadata.packet.net/metadata | jq -r .customdata.COPILOT.PACKET_AUTH)
 INSTANCE_ID=$(curl -sS metadata.packet.net/metadata | jq -r .customdata.COPILOT.INSTANCE_ID)
 FACILITY=$(curl -sS metadata.packet.net/metadata | jq -r .facility)
 CONSUL_TLS_DIR=/opt/consul/tls
 
-curl -sS metadata.packet.net/metadata | jq -r .customdata.COPILOT.CONSUL_CA >> $CONSUL_TLS_DIR/consul-ca.crt
-curl -sS metadata.packet.net/metadata | jq -r .customdata.COPILOT.CONSUL_CERT >> $CONSUL_TLS_DIR/consul.crt
-curl -sS metadata.packet.net/metadata | jq -r .customdata.COPILOT.CONSUL_KEY >> $CONSUL_TLS_DIR/consul.key
+BOOTSTRAP_TOKEN=$(curl -sS -k -H "Authorization: $PACKET_AUTH" https://$COPILOT_CORE_ADDR:5000/bootstrap/$INSTANCE_ID | jq -r .bootstrap_token)
+CONSUL_ENCRYPT=$(curl -sS -k -H "Authorization: $PACKET_AUTH" https://$COPILOT_CORE_ADDR:5000/bootstrap/$INSTANCE_ID | jq -r .consul_encrypt)
+CONSUL_TLS=$(curl -sS -k --header "X-Vault-Token: $BOOTSTRAP_TOKEN" -H "Content-Type: application/json" -d "{\"common_name\": \"$INSTANCE_ID.opencopilot.com\", \"ttl\": \"7200h\"}" https://$COPILOT_CORE_ADDR:8200/v1/pki_consul/issue/instance_consul_tls)
+CONSUL_TOKEN=$(curl -sS -k --header "X-Vault-Token: $BOOTSTRAP_TOKEN" -H "Content-Type: application/json" https://$COPILOT_CORE_ADDR:8200/v1/secret/bootstrap/$INSTANCE_ID | jq -r .data.consul_token)
+echo $CONSUL_TLS | jq -r .data.issuing_ca >> $CONSUL_TLS_DIR/consul-ca.crt
+echo $CONSUL_TLS | jq -r .data.certificate >> $CONSUL_TLS_DIR/consul.crt
+echo $CONSUL_TLS | jq -r .data.private_key >> $CONSUL_TLS_DIR/consul.key
+
 
 cat > /etc/consul/config.json <<EOF
 {

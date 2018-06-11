@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
-	"path/filepath"
 	"strings"
 
 	"github.com/google/uuid"
@@ -76,31 +75,19 @@ service "opencopilot-agent" { policy = "write" }
 		return nil, err
 	}
 
-	ca, err := ioutil.ReadFile(filepath.Join(TLSDirectory, "consul-ca.crt"))
-	if err != nil {
-		return nil, err
-	}
-
-	cert, err := ioutil.ReadFile(filepath.Join(TLSDirectory, "consul.crt"))
-	if err != nil {
-		return nil, err
-	}
-
-	key, err := ioutil.ReadFile(filepath.Join(TLSDirectory, "consul.key"))
+	secrets := vaultClient.Logical()
+	_, err = secrets.Write("bootstrap/"+id.String(), map[string]interface{}{
+		"consul_token": token,
+	})
 	if err != nil {
 		return nil, err
 	}
 
 	customData := map[string]interface{}{
 		"COPILOT": map[string]interface{}{
-			"INSTANCE_ID":    id.String(),
-			"CONSUL_TOKEN":   token, // TODO send all the following via http ip auth server
-			"CONSUL_ENCRYPT": ConsulEncrypt,
-			"CORE_ADDR":      PublicAddress,
-			"CONSUL_CA":      string(ca),
-			"CONSUL_CERT":    string(cert),
-			"CONSUL_KEY":     string(key),
-			"PACKET_AUTH":    in.Auth.Payload,
+			"INSTANCE_ID": id.String(),
+			"CORE_ADDR":   PublicAddress,
+			"PACKET_AUTH": in.Auth.Payload,
 		},
 	}
 
