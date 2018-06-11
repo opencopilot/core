@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	consul "github.com/hashicorp/consul/api"
+	vault "github.com/hashicorp/vault/api"
 	pb "github.com/opencopilot/core/core"
 	"github.com/opencopilot/core/instance"
 	packet "github.com/packethost/packngo"
@@ -41,7 +42,7 @@ func GetPacketInstance(consulClient *consul.Client, instanceID string) (*instanc
 }
 
 // CreatePacketInstance creates the necessary data structures in Consul for a new instance, and provisions a device on Packet
-func CreatePacketInstance(consulClient *consul.Client, in *pb.CreateInstanceRequest) (*instance.Instance, error) {
+func CreatePacketInstance(consulClient *consul.Client, vaultClient *vault.Client, in *pb.CreateInstanceRequest) (*instance.Instance, error) {
 	id := uuid.New()
 
 	packetClient := packet.NewClientWithAuth("", in.Auth.Payload, nil)
@@ -51,7 +52,7 @@ func CreatePacketInstance(consulClient *consul.Client, in *pb.CreateInstanceRequ
 		return nil, err
 	}
 
-	instance, err := instance.CreateInstance(consulClient, instance.CreateInstanceRequest{
+	instance, err := instance.CreateInstance(consulClient, vaultClient, instance.CreateInstanceRequest{
 		ID:       id.String(),
 		Owner:    projID,
 		Device:   "", // can't set this yet because we don't know what the device ID is until it's provisioned
@@ -99,6 +100,7 @@ service "opencopilot-agent" { policy = "write" }
 			"CONSUL_CA":      string(ca),
 			"CONSUL_CERT":    string(cert),
 			"CONSUL_KEY":     string(key),
+			"PACKET_AUTH":    in.Auth.Payload,
 		},
 	}
 

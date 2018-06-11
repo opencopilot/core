@@ -7,6 +7,7 @@ import (
 	"github.com/buger/jsonparser"
 
 	consul "github.com/hashicorp/consul/api"
+	vault "github.com/hashicorp/vault/api"
 	"github.com/opencopilot/consulkvjson"
 	pb "github.com/opencopilot/core/core"
 	"github.com/opencopilot/core/provider"
@@ -164,7 +165,7 @@ func (i *Instance) GetInstance(consulClient *consul.Client) (*Instance, error) {
 }
 
 // CreateInstance creates the key/value pairs for a new instance in Consul
-func CreateInstance(consulClient *consul.Client, instanceParams CreateInstanceRequest) (*Instance, error) {
+func CreateInstance(consulClient *consul.Client, vaultClient *vault.Client, instanceParams CreateInstanceRequest) (*Instance, error) {
 	kv := consulClient.KV()
 
 	ops := consul.KVTxnOps{

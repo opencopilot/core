@@ -8,23 +8,29 @@ import (
 	"net/http"
 
 	consul "github.com/hashicorp/consul/api"
+	vault "github.com/hashicorp/vault/api"
 	"github.com/julienschmidt/httprouter"
 	instance "github.com/opencopilot/core/instance"
 	packet "github.com/packethost/packngo"
 )
 
-type bootstrap struct {
-	consulCli *consul.Client
-	payload   map[string]interface{}
+// Bootstrap
+type Bootstrap struct {
+	ConsulCli   *consul.Client
+	VaultCli    *vault.Client
+	BindAddress string
+	TLSCert     string
+	TLSKey      string
+	Payload     map[string]interface{}
 }
 
-func (b *bootstrap) handler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (b *Bootstrap) handler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	w.Header().Set("Content-Type", "application/json")
 
 	instanceID := ps.ByName("instanceId")
 	authPayload := r.Header.Get("Authorization")
 
-	i, err := instance.NewInstance(b.consulCli, instanceID)
+	i, err := instance.NewInstance(b.ConsulCli, instanceID)
 	if err != nil {
 		http.Error(w, "Problem getting instance", 500)
 		return
@@ -38,15 +44,27 @@ func (b *bootstrap) handler(w http.ResponseWriter, r *http.Request, ps httproute
 
 	clientIP := net.ParseIP(clientAddr)
 
-	verified, err := verify(b.consulCli, i, clientIP, authPayload)
+	verified, err := verify(b.ConsulCli, i, clientIP, authPayload)
 	if err != nil || !verified {
 		http.Error(w, "Could not verify device", 500)
 		return
 	}
 
+	t := b.VaultCli.Auth().Token()
+	bootstrapToken, err := t.Create(&vault.TokenCreateRequest{
+		Policies: []string{"bootstrap"},
+	})
+	if err != nil {
+		http.Error(w, "Could not issue bootstrap token", 500)
+		return
+	}
+
+	payload := b.Payload
+	payload["bootstrap_token"] = bootstrapToken
+
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"instance": instanceID,
-		"payload":  b.payload,
+		"payload":  payload,
 	})
 }
 
@@ -78,13 +96,8 @@ func verify(consulCli *consul.Client, i *instance.Instance, clientAddr net.IP, a
 }
 
 // Serve runs the http bootstrap server
-func Serve(consulCli *consul.Client, payload map[string]interface{}, bindAddress string) {
+func (b *Bootstrap) Serve() {
 	router := httprouter.New()
-	b := &bootstrap{
-		consulCli: consulCli,
-		payload:   payload,
-	}
 	router.GET("/bootstrap/:instanceId", b.handler)
-
-	log.Fatal(http.ListenAndServe(bindAddress, router))
+	log.Fatal(http.ListenAndServeTLS(b.BindAddress, b.TLSCert, b.TLSKey, router))
 }

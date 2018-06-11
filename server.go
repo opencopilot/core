@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	consul "github.com/hashicorp/consul/api"
+	vault "github.com/hashicorp/vault/api"
 	pb "github.com/opencopilot/core/core"
 	pbHealth "github.com/opencopilot/core/health"
 	"github.com/opencopilot/core/instance"
@@ -14,6 +15,7 @@ import (
 
 type server struct {
 	consulClient *consul.Client
+	vaultClient  *vault.Client
 }
 
 func (s *server) Check(ctx context.Context, in *pbHealth.HealthCheckRequest) (*pbHealth.HealthCheckResponse, error) {
@@ -58,7 +60,7 @@ func (s *server) CreateInstance(ctx context.Context, in *pb.CreateInstanceReques
 		return nil, errors.New("Invalid auth provider")
 	}
 
-	instance, err := CreatePacketInstance(s.consulClient, in)
+	instance, err := CreatePacketInstance(s.consulClient, s.vaultClient, in)
 	if err != nil {
 		return nil, err
 	}
