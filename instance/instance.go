@@ -204,9 +204,10 @@ func CreateInstance(consulClient *consul.Client, vaultClient *vault.Client, inst
 }
 
 // DestroyInstance removes an instance from Consul
-func (i *Instance) DestroyInstance(consulClient *consul.Client) error {
+func (i *Instance) DestroyInstance(consulClient *consul.Client, vaultClient *vault.Client) error {
 	kv := consulClient.KV()
 	acl := consulClient.ACL()
+	logical := vaultClient.Logical()
 
 	ops := consul.KVTxnOps{
 		&consul.KVTxnOp{
@@ -235,6 +236,11 @@ func (i *Instance) DestroyInstance(consulClient *consul.Client) error {
 				return err
 			}
 		}
+	}
+
+	_, err = logical.Delete("secret/bootstrap/" + i.ID)
+	if err != nil {
+		return err
 	}
 
 	return nil
