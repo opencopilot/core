@@ -75,8 +75,8 @@ service "opencopilot-agent" { policy = "write" }
 		return nil, err
 	}
 
-	secrets := vaultClient.Logical()
-	_, err = secrets.Write("bootstrap/"+id.String(), map[string]interface{}{
+	logical := vaultClient.Logical()
+	_, err = logical.Write("secret/bootstrap/"+id.String(), map[string]interface{}{
 		"consul_token": token,
 	})
 	if err != nil {
