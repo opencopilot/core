@@ -19,9 +19,9 @@ BOOTSTRAP_TOKEN=$(curl -sS -k -H "Authorization: $PACKET_AUTH" https://$COPILOT_
 CONSUL_ENCRYPT=$(curl -sS -k -H "Authorization: $PACKET_AUTH" https://$COPILOT_CORE_ADDR:5000/bootstrap/$INSTANCE_ID | jq -r .consul_encrypt)
 curl -sS -k --header "X-Vault-Token: $BOOTSTRAP_TOKEN" -H "Content-Type: application/json" -d "{\"common_name\": \"$INSTANCE_ID.opencopilot.com\", \"ttl\": \"7200h\"}" https://$COPILOT_CORE_ADDR:8200/v1/pki_consul/issue/instance_consul_tls >> $CONSUL_TLS_DIR/consul_tls.json
 CONSUL_TOKEN=$(curl -sS -k --header "X-Vault-Token: $BOOTSTRAP_TOKEN" -H "Content-Type: application/json" https://$COPILOT_CORE_ADDR:8200/v1/secret/bootstrap/$INSTANCE_ID | jq -r .data.consul_token)
-cat $CONSUL_TLS/consul_tls.json | jq -r .data.issuing_ca >> $CONSUL_TLS_DIR/consul-ca.crt
-cat $CONSUL_TLS/consul_tls.json | jq -r .data.certificate >> $CONSUL_TLS_DIR/consul.crt
-cat $CONSUL_TLS/consul_tls.json | jq -r .data.private_key >> $CONSUL_TLS_DIR/consul.key
+cat $CONSUL_TLS_DIR/consul_tls.json | jq -r .data.issuing_ca > $CONSUL_TLS_DIR/consul-ca.crt
+cat $CONSUL_TLS_DIR/consul_tls.json | jq -r .data.certificate > $CONSUL_TLS_DIR/consul.crt
+cat $CONSUL_TLS_DIR/consul_tls.json | jq -r .data.private_key > $CONSUL_TLS_DIR/consul.key
 
 
 cat > /etc/consul/config.json <<EOF
