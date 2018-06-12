@@ -129,7 +129,7 @@ service "opencopilot-agent" { policy = "write" }
 }
 
 // DestroyPacketInstance destroys a packet instance
-func DestroyPacketInstance(consulClient *consul.Client, in *pb.DestroyInstanceRequest) error {
+func DestroyPacketInstance(consulClient *consul.Client, vaultClient *vault.Client, in *pb.DestroyInstanceRequest) error {
 	packetClient := packet.NewClientWithAuth("", in.Auth.Payload, nil)
 
 	instance, err := instance.NewInstance(consulClient, in.InstanceId)
@@ -145,7 +145,7 @@ func DestroyPacketInstance(consulClient *consul.Client, in *pb.DestroyInstanceRe
 		return errors.New("Device is still provisioning")
 	}
 
-	err = instance.DestroyInstance(consulClient)
+	err = instance.DestroyInstance(consulClient, vaultClient)
 	if err != nil {
 		return err
 	}

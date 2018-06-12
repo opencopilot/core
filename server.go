@@ -91,7 +91,7 @@ func (s *server) DestroyInstance(ctx context.Context, in *pb.DestroyInstanceRequ
 		return nil, status.Errorf(codes.PermissionDenied, "Invalid authentication")
 	}
 
-	err = DestroyPacketInstance(s.consulClient, in)
+	err = DestroyPacketInstance(s.consulClient, s.vaultClient, in)
 	if err != nil {
 		return nil, err
 	}
