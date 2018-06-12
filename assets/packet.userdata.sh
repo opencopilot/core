@@ -1,4 +1,5 @@
 #!/bin/sh
+set -x
 
 #### Install Docker ###
 curl -fsSL get.docker.com -o get-docker.sh

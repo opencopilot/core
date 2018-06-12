@@ -113,8 +113,8 @@ service "opencopilot-agent" { policy = "write" }
 	}
 	device, _, err := packetClient.Devices.Create(&createReq)
 	if err != nil {
-		instance.DestroyInstance(consulClient)
-		// TODO revoke token
+		instance.DestroyInstance(consulClient, vaultClient)
+		// TODO revoke token and destroy vaul bootstrap
 		return nil, err
 	}
 
