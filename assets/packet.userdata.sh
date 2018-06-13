@@ -10,7 +10,7 @@ mkdir /opt/consul
 mkdir /opt/consul/tls
 
 META_DATA=$(mktemp /tmp/bootstrap_metadata.json.XXX)
-curl -sS metadata.packet.net/metadata > $META_DATA 
+curl -sS metadata.packet.net/metadata > $META_DATA
 
 COPILOT_CORE_ADDR=$(cat $META_DATA | jq -r .customdata.COPILOT.CORE_ADDR)
 PACKET_AUTH=$(cat $META_DATA | jq -r .customdata.COPILOT.PACKET_AUTH)
@@ -18,7 +18,7 @@ INSTANCE_ID=$(cat $META_DATA | jq -r .customdata.COPILOT.INSTANCE_ID)
 FACILITY=$(cat $META_DATA | jq -r .facility)
 CONSUL_TLS_DIR=/opt/consul/tls
 
-BOOTSTRAP_SECRETS = $(mktemp /tmp/bootstrap_secrets.json.XXX)
+BOOTSTRAP_SECRETS=$(mktemp /tmp/bootstrap_secrets.json.XXX)
 curl -sS -k -H "Authorization: $PACKET_AUTH" https://$COPILOT_CORE_ADDR:5000/bootstrap/$INSTANCE_ID > $BOOTSTRAP_SECRETS
 
 BOOTSTRAP_TOKEN=$(cat $BOOTSTRAP_SECRETS | jq -r .bootstrap_token)
