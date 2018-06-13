@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	consul "github.com/hashicorp/consul/api"
 	vault "github.com/hashicorp/vault/api"
+	"github.com/opencopilot/core/application"
 	pb "github.com/opencopilot/core/core"
 	"github.com/opencopilot/core/instance"
 	packet "github.com/packethost/packngo"
@@ -143,4 +144,22 @@ func DestroyPacketInstance(consulClient *consul.Client, vaultClient *vault.Clien
 	packetClient.Devices.Delete(instance.Device)
 
 	return nil
+}
+
+func CreatePacketApplication(consulClient *consul.Client, in *pb.CreateApplicationRequest) (*application.Application, error) {
+	id := uuid.New()
+
+	projID, err := GetPacketProjectFromAuthPayload(in.Auth.Payload)
+	if err != nil {
+		return nil, err
+	}
+
+	a, err := application.CreateApplication(consulClient, &application.CreateApplicationRequest{
+		ID:       id.String(),
+		Provider: "PACKET",
+		Owner:    projID,
+		Type:     in.Type,
+	})
+
+	return a, nil
 }

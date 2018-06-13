@@ -3,13 +3,20 @@ package opencopilot;
 
 service Core {
     rpc CreateInstance(CreateInstanceRequest) returns (Instance) {}
-    rpc DestroyInstance(DestroyInstanceRequest) returns (DestroyInstanceResponse) {}
+    rpc DestroyInstance(DestroyInstanceRequest) returns (EmptyResponse) {}
     rpc GetInstance(GetInstanceRequest) returns (Instance) {}
     
     rpc AddService(AddServiceRequest) returns (Instance) {}
     rpc GetService(GetServiceRequest) returns (ServiceSpec) {}
     rpc ConfigureService(ConfigureServiceRequest) returns (ServiceSpec) {}
     rpc RemoveService(RemoveServiceRequest) returns (Instance) {}
+
+    rpc CreateApplication(CreateApplicationRequest) returns (Application) {}
+    rpc DestroyApplication(DestroyApplicationRequest) returns (EmptyResponse) {}
+    rpc GetApplication(GetApplicationRequest) returns (Application) {}
+    rpc ApplicationAddInstance(ApplicationAddInstanceRequest) returns (Application) {}
+    rpc ApplicationRemoveInstance(ApplicationRemoveInstanceRequest) returns (Application) {}
+
 }
 
 enum Provider {
@@ -32,9 +39,7 @@ message DestroyInstanceRequest {
     string instance_id = 2;
 }
 
-message DestroyInstanceResponse {
-    
-}
+message EmptyResponse {}
 
 message GetInstanceRequest {
     Auth auth = 1;
@@ -76,4 +81,40 @@ message Instance {
 message ServiceSpec { // renamed from "Service" since it was causing a conflict with the ruby gRPC lib
     string type = 1;
     string config = 2;
+}
+
+message Application {
+    string id = 1;
+    Provider provider = 2;
+    string owner = 3;
+    string type = 4;
+    repeated Instance instances = 5;
+    repeated ServiceSpec services = 6;
+}
+
+message CreateApplicationRequest {
+    Auth auth = 1;
+    string type = 2;
+}
+
+message DestroyApplicationRequest {
+    Auth auth = 1;
+    string application_id = 2;
+}
+
+message GetApplicationRequest {
+    Auth auth = 1;
+    string application_id = 2;
+}
+
+message ApplicationAddInstanceRequest {
+    Auth auth = 1;
+    string application_id = 2;
+    string instance_id = 3;
+}
+
+message ApplicationRemoveInstanceRequest {
+    Auth auth = 1;
+    string application_id = 2;
+    string instance_id = 3;
 }

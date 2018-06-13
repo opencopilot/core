@@ -72,7 +72,7 @@ func (s *server) CreateInstance(ctx context.Context, in *pb.CreateInstanceReques
 	return instanceMessage, err
 }
 
-func (s *server) DestroyInstance(ctx context.Context, in *pb.DestroyInstanceRequest) (*pb.DestroyInstanceResponse, error) {
+func (s *server) DestroyInstance(ctx context.Context, in *pb.DestroyInstanceRequest) (*pb.EmptyResponse, error) {
 	if !VerifyAuthentication(in.Auth) {
 		return nil, status.Errorf(codes.PermissionDenied, "Invalid authentication")
 	}
@@ -95,7 +95,7 @@ func (s *server) DestroyInstance(ctx context.Context, in *pb.DestroyInstanceRequ
 	if err != nil {
 		return nil, err
 	}
-	return &pb.DestroyInstanceResponse{}, err
+	return &pb.EmptyResponse{}, err
 }
 
 func (s *server) AddService(ctx context.Context, in *pb.AddServiceRequest) (*pb.Instance, error) {
@@ -199,4 +199,37 @@ func (s *server) RemoveService(ctx context.Context, in *pb.RemoveServiceRequest)
 		return nil, err
 	}
 	return instanceMessage, nil
+}
+
+func (s *server) CreateApplication(ctx context.Context, in *pb.CreateApplicationRequest) (*pb.Application, error) {
+	if !VerifyAuthentication(in.Auth) {
+		return nil, status.Errorf(codes.PermissionDenied, "Invalid authentication")
+	}
+
+	if in.Auth.Provider != pb.Provider_PACKET {
+		return nil, errors.New("Invalid auth provider")
+	}
+
+	application, err := CreatePacketApplication(s.consulClient, in)
+	if err != nil {
+		return nil, err
+	}
+
+	return application.ToMessage()
+}
+
+func (s *server) DestroyApplication(ctx context.Context, in *pb.DestroyApplicationRequest) (*pb.EmptyResponse, error) {
+	return nil, nil
+}
+
+func (s *server) GetApplication(ctx context.Context, in *pb.GetApplicationRequest) (*pb.Application, error) {
+	return nil, nil
+}
+
+func (s *server) ApplicationAddInstance(ctx context.Context, in *pb.ApplicationAddInstanceRequest) (*pb.Application, error) {
+	return nil, nil
+}
+
+func (s *server) ApplicationRemoveInstance(ctx context.Context, in *pb.ApplicationRemoveInstanceRequest) (*pb.Application, error) {
+	return nil, nil
 }

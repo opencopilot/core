@@ -11,45 +11,16 @@ import (
 	"github.com/opencopilot/consulkvjson"
 	pb "github.com/opencopilot/core/core"
 	"github.com/opencopilot/core/provider"
+	service "github.com/opencopilot/core/service"
 )
 
 // Instance is a open-copilot managed instance
 type Instance struct {
 	ID       string
 	Provider *provider.Provider
-	Services Services
+	Services service.Services
 	Owner    string
 	Device   string
-}
-
-// Service is a managed service
-type Service struct {
-	Type   string
-	Config string
-}
-
-// ToMessage serializes a Service for gRPC
-func (s *Service) ToMessage() (*pb.ServiceSpec, error) {
-	return &pb.ServiceSpec{
-		Type:   s.Type,
-		Config: s.Config,
-	}, nil
-}
-
-// Services is a list of Service
-type Services []*Service
-
-// ToMessage serializes a list of Services for gRPC
-func (services Services) ToMessage() ([]*pb.ServiceSpec, error) {
-	s := make([]*pb.ServiceSpec, 0)
-	for _, service := range services {
-		serialized, err := service.ToMessage()
-		if err != nil {
-			return nil, err
-		}
-		s = append(s, serialized)
-	}
-	return s, nil
 }
 
 // NewInstance returns a new instance
@@ -137,14 +108,14 @@ func (i *Instance) GetInstance(consulClient *consul.Client) (*Instance, error) {
 		prov = nil
 	}
 
-	serviceList := make([]*Service, 0)
+	serviceList := make([]*service.Service, 0)
 	services, dataType, _, _ := jsonparser.Get(marshalledJSON, "instances", i.ID, "services")
 	if dataType == jsonparser.NotExist {
 		services = nil
 	} else {
-		jsonparser.ObjectEach(services, func(service, config []byte, dataType jsonparser.ValueType, offset int) error {
-			serviceList = append(serviceList, &Service{
-				Type:   string(service),
+		jsonparser.ObjectEach(services, func(s, config []byte, dataType jsonparser.ValueType, offset int) error {
+			serviceList = append(serviceList, &service.Service{
+				Type:   string(s),
 				Config: string(config),
 			})
 			return nil
@@ -328,7 +299,7 @@ func (i *Instance) AddService(consulClient *consul.Client, service, config strin
 }
 
 // GetService returns the service requested
-func (i *Instance) GetService(consulClient *consul.Client, serviceType string) (*Service, error) {
+func (i *Instance) GetService(consulClient *consul.Client, serviceType string) (*service.Service, error) {
 	kv := consulClient.KV()
 	instanceID := i.ID
 	serviceKVPairs, _, err := kv.List("instances/"+instanceID+"/services/"+serviceType, nil)
@@ -351,14 +322,14 @@ func (i *Instance) GetService(consulClient *consul.Client, serviceType string) (
 		return nil, errors.New("could not retrieve service config")
 	}
 
-	return &Service{
+	return &service.Service{
 		Type:   serviceType,
 		Config: string(config),
 	}, nil
 }
 
 // ConfigureService sets the configuration for a service in Consul
-func (i *Instance) ConfigureService(consulClient *consul.Client, serviceType, config string) (*Service, error) {
+func (i *Instance) ConfigureService(consulClient *consul.Client, serviceType, config string) (*service.Service, error) {
 	kv := consulClient.KV()
 	instanceID := i.ID
 
