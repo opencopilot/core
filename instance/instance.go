@@ -433,3 +433,22 @@ func (i *Instance) RemoveService(consulClient *consul.Client, service string) (*
 
 	return i, nil
 }
+
+// GenerateConsulToken generates an ACL in consul for this instance
+func (i *Instance) GenerateConsulToken(consulClient *consul.Client) (string, error) {
+	acl := consulClient.ACL()
+	token, _, err := acl.Create(&consul.ACLEntry{
+		Name: "instance-" + i.ID,
+		Type: consul.ACLClientType,
+		// TODO: move this out to a file template?
+		Rules: `key "instances/` + i.ID + `" { policy = "read" }
+node "` + i.ID + `" { policy = "write" }
+service "opencopilot-agent" { policy = "write" }
+`,
+	}, nil)
+	if err != nil {
+		return "", err
+	}
+
+	return token, nil
+}

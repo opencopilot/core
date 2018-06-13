@@ -61,16 +61,7 @@ func CreatePacketInstance(consulClient *consul.Client, vaultClient *vault.Client
 		return nil, err
 	}
 
-	acl := consulClient.ACL()
-	token, _, err := acl.Create(&consul.ACLEntry{
-		Name: "instance-" + id.String(),
-		Type: consul.ACLClientType,
-		// TODO: move this out to a file?
-		Rules: `key "instances/` + id.String() + `" { policy = "read" }
-node "` + id.String() + `" { policy = "write" }
-service "opencopilot-agent" { policy = "write" }
-`,
-	}, nil)
+	token, err := instance.GenerateConsulToken(consulClient)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +105,6 @@ service "opencopilot-agent" { policy = "write" }
 	device, _, err := packetClient.Devices.Create(&createReq)
 	if err != nil {
 		instance.DestroyInstance(consulClient, vaultClient)
-		// TODO revoke token and destroy vaul bootstrap
 		return nil, err
 	}
 
