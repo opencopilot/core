@@ -88,7 +88,7 @@ func registerCoreService(consulCli *consul.Client) {
 			CheckID:  "core-grpc",
 			Name:     "Core gRPC Health Check",
 			GRPC:     BindAddress,
-			Interval: "10s",
+			Interval: "20s",
 		},
 	})
 	if err != nil {
