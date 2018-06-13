@@ -9,14 +9,20 @@ mkdir /etc/consul
 mkdir /opt/consul
 mkdir /opt/consul/tls
 
-COPILOT_CORE_ADDR=$(curl -sS metadata.packet.net/metadata | jq -r .customdata.COPILOT.CORE_ADDR)
-PACKET_AUTH=$(curl -sS metadata.packet.net/metadata | jq -r .customdata.COPILOT.PACKET_AUTH)
-INSTANCE_ID=$(curl -sS metadata.packet.net/metadata | jq -r .customdata.COPILOT.INSTANCE_ID)
-FACILITY=$(curl -sS metadata.packet.net/metadata | jq -r .facility)
+META_DATA = $(mktemp /tmp/bootstrap_metadata.json)
+curl -sS metadata.packet.net/metadata > $META_DATA 
+
+COPILOT_CORE_ADDR=$(cat $META_DATA | jq -r .customdata.COPILOT.CORE_ADDR)
+PACKET_AUTH=$(cat $META_DATA | jq -r .customdata.COPILOT.PACKET_AUTH)
+INSTANCE_ID=$(cat $META_DATA | jq -r .customdata.COPILOT.INSTANCE_ID)
+FACILITY=$(cat $META_DATA | jq -r .facility)
 CONSUL_TLS_DIR=/opt/consul/tls
 
-BOOTSTRAP_TOKEN=$(curl -sS -k -H "Authorization: $PACKET_AUTH" https://$COPILOT_CORE_ADDR:5000/bootstrap/$INSTANCE_ID | jq -r .bootstrap_token)
-CONSUL_ENCRYPT=$(curl -sS -k -H "Authorization: $PACKET_AUTH" https://$COPILOT_CORE_ADDR:5000/bootstrap/$INSTANCE_ID | jq -r .consul_encrypt)
+BOOTSTRAP_SECRETS = $(mktemp /tmp/bootstrap_secrets.json)
+curl -sS -k -H "Authorization: $PACKET_AUTH" https://$COPILOT_CORE_ADDR:5000/bootstrap/$INSTANCE_ID > $BOOTSTRAP_SECRETS
+
+BOOTSTRAP_TOKEN=$(cat $BOOTSTRAP_SECRETS | jq -r .bootstrap_token)
+CONSUL_ENCRYPT=$(cat $BOOTSTRAP_SECRETS | jq -r .consul_encrypt)
 curl -sS -k --header "X-Vault-Token: $BOOTSTRAP_TOKEN" -H "Content-Type: application/json" -d "{\"common_name\": \"$INSTANCE_ID.opencopilot.com\", \"ttl\": \"7200h\"}" https://$COPILOT_CORE_ADDR:8200/v1/pki_consul/issue/instance_consul_tls >> $CONSUL_TLS_DIR/consul_tls.json
 CONSUL_TOKEN=$(curl -sS -k --header "X-Vault-Token: $BOOTSTRAP_TOKEN" -H "Content-Type: application/json" https://$COPILOT_CORE_ADDR:8200/v1/secret/bootstrap/$INSTANCE_ID | jq -r .data.consul_token)
 cat $CONSUL_TLS_DIR/consul_tls.json | jq -r .data.issuing_ca > $CONSUL_TLS_DIR/consul-ca.crt
@@ -43,7 +49,7 @@ cat > /etc/consul/config.json <<EOF
 }
 EOF
 
-CONSUL_ADVERTISE_ADDRESS=$( curl -sS metadata.packet.net/metadata | jq -r '.network.addresses[] | select(.management == true) | select(.public == true) | select(.address_family == 4) | .address')
+CONSUL_ADVERTISE_ADDRESS=$( cat $META_DATA | jq -r '.network.addresses[] | select(.management == true) | select(.public == true) | select(.address_family == 4) | .address')
 
 ### Start Consul ###
 docker run \
@@ -56,7 +62,7 @@ docker run \
 
 ### Start Agent ###
 docker run \
-    -e "INSTANCE_ID=$(curl -sS metadata.packet.net/metadata | jq -r .customdata.COPILOT.INSTANCE_ID)" \
+    -e "INSTANCE_ID=$INSTANCE_ID" \
     -e "CONFIG_DIR=/etc/opencopilot" \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v /etc/opencopilot/:/etc/opencopilot/ \
