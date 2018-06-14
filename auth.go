@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/opencopilot/core/application"
 	pb "github.com/opencopilot/core/core"
 	"github.com/opencopilot/core/instance"
 	packet "github.com/packethost/packngo"
@@ -33,6 +34,19 @@ func (p *PacketAuth) CanManageInstance(instance *instance.Instance) bool {
 	return false
 }
 
+// CanManageApplication verifies that the passed in authentication can manage the specified application, if it's on Packet
+func (p *PacketAuth) CanManageApplication(application *application.Application) bool {
+	client := packet.NewClientWithAuth("", p.Payload, nil)
+	project, _, err := client.Projects.Get(application.Owner)
+	if err != nil {
+		return false
+	}
+	if project != nil {
+		return true
+	}
+	return false
+}
+
 // VerifyAuthentication verifies that a given Auth payload can authenticate to the provider it specifies
 func VerifyAuthentication(auth *pb.Auth) bool {
 	switch auth.Provider {
@@ -50,6 +64,17 @@ func CanManageInstance(auth *pb.Auth, instance *instance.Instance) bool {
 	case pb.Provider_PACKET:
 		authProvider := PacketAuth{auth}
 		return authProvider.CanManageInstance(instance)
+	default:
+		return false
+	}
+}
+
+// CanManageApplication checks whether or not the passed in authentication can manage the specified application
+func CanManageApplication(auth *pb.Auth, application *application.Application) bool {
+	switch auth.Provider {
+	case pb.Provider_PACKET:
+		authProvider := PacketAuth{auth}
+		return authProvider.CanManageApplication(application)
 	default:
 		return false
 	}

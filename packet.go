@@ -146,6 +146,7 @@ func DestroyPacketInstance(consulClient *consul.Client, vaultClient *vault.Clien
 	return nil
 }
 
+// CreatePacketApplication creates an application in a Packet project
 func CreatePacketApplication(consulClient *consul.Client, in *pb.CreateApplicationRequest) (*application.Application, error) {
 	id := uuid.New()
 
@@ -162,4 +163,15 @@ func CreatePacketApplication(consulClient *consul.Client, in *pb.CreateApplicati
 	})
 
 	return a, nil
+}
+
+// GetPacketApplication gets a Packet application
+func GetPacketApplication(consulClient *consul.Client, applicationID string) (*application.Application, error) {
+
+	app, err := application.NewApplication(consulClient, applicationID)
+	if err != nil {
+		return nil, err
+	}
+
+	return app, nil
 }

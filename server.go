@@ -223,10 +223,61 @@ func (s *server) DestroyApplication(ctx context.Context, in *pb.DestroyApplicati
 }
 
 func (s *server) GetApplication(ctx context.Context, in *pb.GetApplicationRequest) (*pb.Application, error) {
-	return nil, nil
+	if !VerifyAuthentication(in.Auth) {
+		return nil, status.Errorf(codes.PermissionDenied, "Invalid authentication")
+	}
+
+	if in.Auth.Provider != pb.Provider_PACKET {
+		return nil, errors.New("Invalid auth provider")
+	}
+
+	app, err := GetPacketApplication(s.consulClient, in.ApplicationId)
+	if err != nil {
+		return nil, err
+	}
+
+	canManage := CanManageApplication(in.Auth, app)
+	if !canManage {
+		return nil, status.Errorf(codes.PermissionDenied, "Invalid authentication")
+	}
+
+	appMessage, err := app.ToMessage()
+	if err != nil {
+		return nil, err
+	}
+
+	return appMessage, err
 }
 
 func (s *server) ApplicationAddInstance(ctx context.Context, in *pb.ApplicationAddInstanceRequest) (*pb.Application, error) {
+	if !VerifyAuthentication(in.Auth) {
+		return nil, status.Errorf(codes.PermissionDenied, "Invalid authentication")
+	}
+
+	if in.Auth.Provider != pb.Provider_PACKET {
+		return nil, errors.New("Invalid auth provider")
+	}
+
+	application, err := GetPacketApplication(s.consulClient, in.ApplicationId)
+	if err != nil {
+		return nil, err
+	}
+
+	canManageApplication := CanManageApplication(in.Auth, application)
+	if !canManageApplication {
+		return nil, status.Errorf(codes.PermissionDenied, "Invalid authentication")
+	}
+
+	instance, err := GetPacketInstance(s.consulClient, in.InstanceId)
+	if err != nil {
+		return nil, err
+	}
+
+	canManageInstance := CanManageInstance(in.Auth, instance)
+	if !canManageInstance {
+		return nil, status.Errorf(codes.PermissionDenied, "Invalid authentication")
+	}
+
 	return nil, nil
 }
 
