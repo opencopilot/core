@@ -25,6 +25,9 @@ type Instance struct {
 
 // NewInstance returns a new instance
 func NewInstance(consulClient *consul.Client, id string) (*Instance, error) {
+	if id == "" {
+		return nil, errors.New("No instance ID specified")
+	}
 	i := Instance{
 		ID: id,
 	}

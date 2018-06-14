@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"log"
 
 	consul "github.com/hashicorp/consul/api"
 	vault "github.com/hashicorp/vault/api"
@@ -232,9 +231,7 @@ func (s *server) GetApplication(ctx context.Context, in *pb.GetApplicationReques
 		return nil, errors.New("Invalid auth provider")
 	}
 
-	log.Println(in.ApplicationId)
 	app, err := GetPacketApplication(s.consulClient, in.ApplicationId)
-	log.Println(app)
 	if err != nil {
 		return nil, err
 	}
