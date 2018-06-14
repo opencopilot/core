@@ -72,16 +72,18 @@ func (a *Application) GetApplication(consulClient *consul.Client) (*Application,
 	if err != nil {
 		return nil, err
 	}
-	log.Println(kvs)
+
 	m, err := consulkvjson.ConsulKVsToJSON(kvs)
 	if err != nil {
 		return nil, err
 	}
+	log.Println(m)
 
 	marshalledJSON, err := json.Marshal(m)
 	if err != nil {
 		return nil, err
 	}
+	log.Println(marshalledJSON)
 
 	owner, dataType, _, err := jsonparser.Get(marshalledJSON, "applications", a.ID, "owner")
 	if err != nil {
@@ -90,7 +92,6 @@ func (a *Application) GetApplication(consulClient *consul.Client) (*Application,
 	if dataType == jsonparser.NotExist {
 		owner = nil
 	}
-	log.Println(owner)
 
 	appType, dataType, _, err := jsonparser.Get(marshalledJSON, "applications", a.ID, "type")
 	if err != nil {
