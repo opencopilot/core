@@ -112,19 +112,19 @@ func (a *Application) GetApplication(consulClient *consul.Client) (*Application,
 		prov = nil
 	}
 
-	serviceList := make([]*service.Service, 0)
-	services, dataType, _, _ := jsonparser.Get(marshalledJSON, "applications", a.ID, "services")
-	if dataType == jsonparser.NotExist {
-		services = nil
-	} else {
-		jsonparser.ObjectEach(services, func(s, config []byte, dataType jsonparser.ValueType, offset int) error {
-			serviceList = append(serviceList, &service.Service{
-				Type:   string(s),
-				Config: string(config),
-			})
-			return nil
-		})
-	}
+	// serviceList := make([]*service.Service, 0)
+	// services, dataType, _, _ := jsonparser.Get(marshalledJSON, "applications", a.ID, "services")
+	// if dataType == jsonparser.NotExist {
+	// 	services = nil
+	// } else {
+	// 	jsonparser.ObjectEach(services, func(s, config []byte, dataType jsonparser.ValueType, offset int) error {
+	// 		serviceList = append(serviceList, &service.Service{
+	// 			Type:   string(s),
+	// 			Config: string(config),
+	// 		})
+	// 		return nil
+	// 	})
+	// }
 
 	p, err := provider.NewProvider(string(prov))
 	if err != nil {
@@ -134,7 +134,7 @@ func (a *Application) GetApplication(consulClient *consul.Client) (*Application,
 	a.Provider = p
 	a.Owner = string(owner)
 	a.Type = string(appType)
-	a.Services = serviceList
+	// a.Services = serviceList
 
 	return a, nil
 }
