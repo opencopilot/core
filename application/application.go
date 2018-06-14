@@ -178,6 +178,25 @@ func CreateApplication(consulClient *consul.Client, applicationParams *CreateApp
 	return application, nil
 }
 
+// DestroyApplication destroys an application in Consul
+func (a *Application) DestroyApplication(consulClient *consul.Client) error {
+	kv := consulClient.KV()
+	ops := consul.KVTxnOps{
+		&consul.KVTxnOp{
+			Verb: consul.KVDeleteTree,
+			Key:  "applications/" + a.ID + "/",
+		},
+	}
+	ok, _, _, err := kv.Txn(ops, nil)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return errors.New("Could not remove application in Consul")
+	}
+	return nil
+}
+
 // AddInstance adds an instance to the application
 func (a *Application) AddInstance(consulClient *consul.Client, i *instance.Instance) (*Application, error) {
 	kv := consulClient.KV()

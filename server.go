@@ -219,7 +219,30 @@ func (s *server) CreateApplication(ctx context.Context, in *pb.CreateApplication
 }
 
 func (s *server) DestroyApplication(ctx context.Context, in *pb.DestroyApplicationRequest) (*pb.EmptyResponse, error) {
-	return nil, nil
+	if !VerifyAuthentication(in.Auth) {
+		return nil, status.Errorf(codes.PermissionDenied, "Invalid authentication")
+	}
+
+	if in.Auth.Provider != pb.Provider_PACKET {
+		return nil, errors.New("Invalid auth provider")
+	}
+
+	app, err := GetPacketApplication(s.consulClient, in.ApplicationId)
+	if err != nil {
+		return nil, err
+	}
+
+	canManage := CanManageApplication(in.Auth, app)
+	if !canManage {
+		return nil, status.Errorf(codes.PermissionDenied, "Invalid authentication")
+	}
+
+	err = app.DestroyApplication(s.consulClient)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.EmptyResponse{}, nil
 }
 
 func (s *server) GetApplication(ctx context.Context, in *pb.GetApplicationRequest) (*pb.Application, error) {
