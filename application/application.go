@@ -39,10 +39,12 @@ func (a *Application) ToMessage() (*pb.Application, error) {
 		return nil, err
 	}
 	return &pb.Application{
-		Id:       a.ID,
-		Owner:    a.Owner,
-		Provider: a.Provider.PbProvider,
-		Services: services,
+		Id:        a.ID,
+		Type:      a.Type,
+		Owner:     a.Owner,
+		Provider:  a.Provider.PbProvider,
+		Services:  services,
+		Instances: []*pb.Instance{},
 	}, nil
 }
 
