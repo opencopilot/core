@@ -70,6 +70,7 @@ func (a *Application) servicesPrefix() string {
 	return "applications/" + a.ID + "/services/"
 }
 
+// GetApplication gets an application
 func (a *Application) GetApplication(consulClient *consul.Client) (*Application, error) {
 	kv := consulClient.KV()
 	kvs, _, err := kv.List(a.applicationPrefix(), nil)
@@ -138,6 +139,7 @@ func (a *Application) GetApplication(consulClient *consul.Client) (*Application,
 	return a, nil
 }
 
+// CreateApplication creates an application
 func CreateApplication(consulClient *consul.Client, applicationParams *CreateApplicationRequest) (*Application, error) {
 	kv := consulClient.KV()
 
@@ -174,4 +176,28 @@ func CreateApplication(consulClient *consul.Client, applicationParams *CreateApp
 	}
 
 	return application, nil
+}
+
+// AddInstance adds an instance to the application
+func (a *Application) AddInstance(consulClient *consul.Client, i *instance.Instance) (*Application, error) {
+	kv := consulClient.KV()
+
+	_, err := kv.Put(&consul.KVPair{Key: "applications/" + a.ID + "/instances/" + i.ID}, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return a, nil
+}
+
+// RemoveInstance removes an instance from the application
+func (a *Application) RemoveInstance(consulClient *consul.Client, i *instance.Instance) (*Application, error) {
+	kv := consulClient.KV()
+
+	_, err := kv.Delete("applications/"+a.ID+"/instances/"+i.ID, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return a, nil
 }
