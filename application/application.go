@@ -70,6 +70,8 @@ func (a *Application) servicesPrefix() string {
 
 func (a *Application) GetApplication(consulClient *consul.Client) (*Application, error) {
 	kv := consulClient.KV()
+	log.Println(a.ID)
+	log.Println(a)
 	kvs, _, err := kv.List(a.applicationPrefix(), nil)
 	if err != nil {
 		return nil, err
