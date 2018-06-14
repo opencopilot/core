@@ -3,6 +3,7 @@ package application
 import (
 	"encoding/json"
 	"errors"
+	"log"
 
 	"github.com/buger/jsonparser"
 	consul "github.com/hashicorp/consul/api"
@@ -71,7 +72,7 @@ func (a *Application) GetApplication(consulClient *consul.Client) (*Application,
 	if err != nil {
 		return nil, err
 	}
-
+	log.Println(kvs)
 	m, err := consulkvjson.ConsulKVsToJSON(kvs)
 	if err != nil {
 		return nil, err
@@ -89,6 +90,7 @@ func (a *Application) GetApplication(consulClient *consul.Client) (*Application,
 	if dataType == jsonparser.NotExist {
 		owner = nil
 	}
+	log.Println(owner)
 
 	appType, dataType, _, err := jsonparser.Get(marshalledJSON, "applications", a.ID, "type")
 	if err != nil {
