@@ -77,15 +77,14 @@ func (a *Application) GetApplication(consulClient *consul.Client) (*Application,
 	if err != nil {
 		return nil, err
 	}
-	log.Println(m)
 
 	marshalledJSON, err := json.Marshal(m)
 	if err != nil {
 		return nil, err
 	}
-	log.Println(marshalledJSON)
 
 	owner, dataType, _, err := jsonparser.Get(marshalledJSON, "applications", a.ID, "owner")
+	log.Println(owner)
 	if err != nil {
 		return nil, err
 	}
@@ -94,6 +93,7 @@ func (a *Application) GetApplication(consulClient *consul.Client) (*Application,
 	}
 
 	appType, dataType, _, err := jsonparser.Get(marshalledJSON, "applications", a.ID, "type")
+	log.Println(appType)
 	if err != nil {
 		return nil, err
 	}
@@ -102,6 +102,7 @@ func (a *Application) GetApplication(consulClient *consul.Client) (*Application,
 	}
 
 	prov, dataType, _, err := jsonparser.Get(marshalledJSON, "applications", a.ID, "provider")
+	log.Println(prov)
 	if err != nil {
 		return nil, err
 	}
