@@ -37,13 +37,22 @@ func (a *Application) ToMessage() (*pb.Application, error) {
 	if err != nil {
 		return nil, err
 	}
+	// TODO: move this to the instance package? Similar to how serializing services is handled above?
+	instances := make([]*pb.Instance, 0)
+	for _, inst := range a.Instances {
+		serialized, err := inst.ToMessage()
+		if err != nil {
+			return nil, err
+		}
+		instances = append(instances, serialized)
+	}
 	return &pb.Application{
 		Id:        a.ID,
 		Type:      a.Type,
 		Owner:     a.Owner,
 		Provider:  a.Provider.PbProvider,
 		Services:  services,
-		Instances: []*pb.Instance{},
+		Instances: instances,
 	}, nil
 }
 
@@ -126,6 +135,25 @@ func (a *Application) GetApplication(consulClient *consul.Client) (*Application,
 		})
 	}
 
+	instanceList := make([]*instance.Instance, 0)
+	instances, dataType, _, _ := jsonparser.Get(marshalledJSON, "applications", a.ID, "instances")
+	if dataType == jsonparser.NotExist {
+		instances = nil
+	} else {
+		jsonparser.ObjectEach(instances, func(i, config []byte, dataType jsonparser.ValueType, offset int) error {
+			inst, err := instance.NewInstance(consulClient, string(i))
+			if err != nil {
+				return err
+			}
+			inst, err = inst.GetInstance(consulClient)
+			if err != nil {
+				return err
+			}
+			instanceList = append(instanceList, inst)
+			return nil
+		})
+	}
+
 	p, err := provider.NewProvider(string(prov))
 	if err != nil {
 		return nil, err
@@ -135,6 +163,7 @@ func (a *Application) GetApplication(consulClient *consul.Client) (*Application,
 	a.Owner = string(owner)
 	a.Type = string(appType)
 	a.Services = serviceList
+	a.Instances = instanceList
 
 	return a, nil
 }
